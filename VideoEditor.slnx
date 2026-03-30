@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/VideoEditor.Application/VideoEditor.Application.csproj" />
     <Project Path="src/VideoEditor.Domain/VideoEditor.Domain.csproj" />
+    <Project Path="src/VideoEditor.Infrastructure/VideoEditor.Infrastructure.csproj" />
     <Project Path="src/VideoEditor.UI/VideoEditor.UI.csproj" />
   </Folder>
 </Solution>

@@ -1,4 +1,5 @@
-﻿using System.Windows;
+using System.Windows;
+using VideoEditor.UI.ViewModels;
 
 namespace VideoEditor.UI;
 
@@ -10,8 +11,9 @@ public partial class MainWindow : Window
     /// <summary>
     /// 	Создает экземпляр главного окна.
     /// </summary>
-    public MainWindow()
+    public MainWindow(MainWindowViewModel viewModel)
     {
         InitializeComponent();
+        DataContext = viewModel;
     }
 }

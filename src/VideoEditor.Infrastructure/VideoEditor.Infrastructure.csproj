@@ -3,15 +3,12 @@
   <ItemGroup>
     <ProjectReference Include="..\VideoEditor.Application\VideoEditor.Application.csproj" />
     <ProjectReference Include="..\VideoEditor.Domain\VideoEditor.Domain.csproj" />
-    <ProjectReference Include="..\VideoEditor.Infrastructure\VideoEditor.Infrastructure.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
 </Project>
