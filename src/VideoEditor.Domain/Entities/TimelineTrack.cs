@@ -1,8 +1,17 @@
 ﻿namespace VideoEditor.Domain.Entities;
 
-public sealed class TimelineTrack
+/// <summary>
+/// 	Отдельная дорожка таймлайна.
+/// </summary>
+public sealed class TimelineTrack : EntityBase
 {
-    public Guid Id { get; init; } = Guid.NewGuid();
+    /// <summary>
+    /// 	Название дорожки, отображаемое в интерфейсе.
+    /// </summary>
     public string Name { get; init; } = "Video Track 1";
+
+    /// <summary>
+    /// 	Кадры/клипы, размещенные на этой дорожке.
+    /// </summary>
     public IList<TimelineClip> Clips { get; } = new List<TimelineClip>();
 }

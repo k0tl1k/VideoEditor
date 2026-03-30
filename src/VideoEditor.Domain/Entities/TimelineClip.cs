@@ -1,16 +1,32 @@
 ﻿namespace VideoEditor.Domain.Entities;
 
-public sealed class TimelineClip
+/// <summary>
+/// 	Экземпляр клипа, размещенный на дорожке таймлайна.
+/// </summary>
+public sealed class TimelineClip : EntityBase
 {
-    public Guid Id { get; init; } = Guid.NewGuid();
+    /// <summary>
+    /// 	Ссылка на исходный медиафайл.
+    /// </summary>
     public Guid MediaAssetId { get; init; }
 
-    // Segment inside the source file.
+    /// <summary>
+    /// 	Точка начала в исходном файле.
+    /// </summary>
     public TimeSpan SourceStart { get; init; } = TimeSpan.Zero;
+
+    /// <summary>
+    /// 	Длительность выбранного фрагмента исходника.
+    /// </summary>
     public TimeSpan SourceDuration { get; init; } = TimeSpan.Zero;
 
-    // Position of this clip on the timeline.
+    /// <summary>
+    /// 	Позиция начала клипа на таймлайне.
+    /// </summary>
     public TimeSpan TimelineStart { get; init; } = TimeSpan.Zero;
 
+    /// <summary>
+    /// 	Вычисляемая позиция конца клипа на таймлайне.
+    /// </summary>
     public TimeSpan TimelineEnd => TimelineStart + SourceDuration;
 }
