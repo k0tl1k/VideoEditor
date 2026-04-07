@@ -6,7 +6,7 @@
         <DockPanel LastChildFill="False">
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
                 <TextBlock Text="VideoEditor" FontSize="18" FontWeight="Bold" Margin="0,0,18,0"/>
-                <Button Content="Import" />
+                <Button Content="Import" Command="{Binding ImportMediaCommand}" />
                 <Button Content="Trim" />
                 <Button Content="Split" />
                 <Button Content="Export" Margin="4,0,0,0" />

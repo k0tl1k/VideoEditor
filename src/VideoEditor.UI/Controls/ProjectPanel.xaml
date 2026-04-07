@@ -1,6 +1,26 @@
 ﻿<UserControl x:Class="VideoEditor.UI.Controls.ProjectPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="ThumbnailImageStyle" TargetType="Image">
+            <Setter Property="Visibility" Value="Visible" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasThumbnail}" Value="False">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ThumbnailPlaceholderStyle" TargetType="Border">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasThumbnail}" Value="False">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
     <Border Style="{StaticResource PanelBorderStyle}">
         <DockPanel>
             <TextBlock Text="Project" Style="{StaticResource TitleTextStyle}" DockPanel.Dock="Top" />
@@ -12,20 +32,41 @@
 
                 <TextBox Grid.Row="0"
                          Margin="0,0,0,10"
+                         IsReadOnly="True"
                          Background="{StaticResource BgElevatedBrush}"
                          BorderBrush="{StaticResource BorderBrushDark}"
-                         Foreground="{StaticResource TextPrimaryBrush}"
+                         Foreground="{StaticResource TextMutedBrush}"
                          Padding="8,4"
-                         Text="Search media..." />
+                         Text="Imported media" />
 
                 <ListBox Grid.Row="1"
+                         ItemsSource="{Binding ImportedMedia}"
                          Background="{StaticResource BgElevatedBrush}"
                          BorderBrush="{StaticResource BorderBrushDark}"
                          Foreground="{StaticResource TextPrimaryBrush}">
-                    <ListBoxItem Content="intro.mp4" />
-                    <ListBoxItem Content="scene_01.mp4" />
-                    <ListBoxItem Content="voiceover.wav" />
-                    <ListBoxItem Content="logo.png" />
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,4,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="64" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Grid Width="56" Height="40" Margin="0,0,8,0">
+                                    <Border Background="#11151C" BorderBrush="{StaticResource BorderBrushDark}" BorderThickness="1" CornerRadius="3" />
+                                    <Image Source="{Binding ThumbnailPath}" Stretch="UniformToFill" Style="{StaticResource ThumbnailImageStyle}" ClipToBounds="True" />
+                                    <Border Style="{StaticResource ThumbnailPlaceholderStyle}" Background="#11151C" BorderBrush="{StaticResource BorderBrushDark}" BorderThickness="1" CornerRadius="3">
+                                        <TextBlock Text="{Binding TypeLabel}" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+                                    </Border>
+                                </Grid>
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding TypeLabel}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
                 </ListBox>
             </Grid>
         </DockPanel>

@@ -5,17 +5,19 @@ using VideoEditor.Infrastructure.Services;
 namespace VideoEditor.Infrastructure;
 
 /// <summary>
-/// 	Р РµРіРёСЃС‚СЂР°С†РёСЏ СЃРµСЂРІРёСЃРѕРІ РёРЅС„СЂР°СЃС‚СЂСѓРєС‚СѓСЂС‹.
+/// 	Регистрирует сервисы инфраструктуры.
 /// </summary>
 public static class DependencyInjection
 {
     /// <summary>
-    /// 	Р”РѕР±Р°РІР»СЏРµС‚ РёРЅС„СЂР°СЃС‚СЂСѓРєС‚СѓСЂРЅС‹Рµ СЂРµР°Р»РёР·Р°С†РёРё.
+    /// 	Добавляет инфраструктурные реализации.
     /// </summary>
+    /// <param name="services"> Коллекция сервисов. </param>
+    /// <returns> Обновлённая коллекция сервисов. </returns>
     public static SimpleServiceCollection AddInfrastructureServices(this SimpleServiceCollection services)
     {
         services.AddSingleton<IProjectPathService, FileSystemProjectPathService>();
+        services.AddSingleton<IMediaThumbnailService, MediaThumbnailService>();
         return services;
     }
 }
-

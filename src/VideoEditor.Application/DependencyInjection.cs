@@ -5,17 +5,19 @@ using VideoEditor.Application.Services;
 namespace VideoEditor.Application;
 
 /// <summary>
-/// 	Р РµРіРёСЃС‚СЂР°С†РёСЏ СЃРµСЂРІРёСЃРѕРІ СЃР»РѕСЏ РїСЂРёР»РѕР¶РµРЅРёСЏ.
+/// 	Регистрирует сервисы слоя приложения.
 /// </summary>
 public static class DependencyInjection
 {
     /// <summary>
-    /// 	Р”РѕР±Р°РІР»СЏРµС‚ СЃРµСЂРІРёСЃС‹ use-case СЃР»РѕСЏ.
+    /// 	Добавляет сервисы слоя приложения.
     /// </summary>
+    /// <param name="services"> Коллекция сервисов. </param>
+    /// <returns> Обновлённая коллекция сервисов. </returns>
     public static SimpleServiceCollection AddApplicationServices(this SimpleServiceCollection services)
     {
         services.AddSingleton<IProjectBootstrapService, ProjectBootstrapService>();
+        services.AddSingleton<IMediaImportService, MediaImportService>();
         return services;
     }
 }
-
