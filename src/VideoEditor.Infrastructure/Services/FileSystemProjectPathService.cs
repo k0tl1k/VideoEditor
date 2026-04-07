@@ -1,9 +1,11 @@
+﻿using System;
+using System.IO;
 using VideoEditor.Application.Abstractions;
 
 namespace VideoEditor.Infrastructure.Services;
 
 /// <summary>
-/// 	Сервис с правилами хранения проектов на диске.
+/// 	Определяет пути хранения проектов на диске.
 /// </summary>
 public sealed class FileSystemProjectPathService : IProjectPathService
 {

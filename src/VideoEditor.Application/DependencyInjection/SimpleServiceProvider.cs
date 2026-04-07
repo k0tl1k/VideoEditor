@@ -20,9 +20,7 @@ public sealed class SimpleServiceProvider : IServiceProvider, IDisposable
     public object? GetService(Type serviceType)
     {
         if (_singletons.TryGetValue(serviceType, out var existing))
-        {
             return existing;
-        }
 
         if (_registrations.TryGetValue(serviceType, out var factory))
         {
@@ -63,10 +61,8 @@ public sealed class SimpleServiceProvider : IServiceProvider, IDisposable
 
         var parameters = constructor.GetParameters();
         if (parameters.Length == 0)
-        {
             return Activator.CreateInstance(implementationType)
                    ?? throw new InvalidOperationException($"Cannot instantiate '{implementationType.FullName}'.");
-        }
 
         var args = new object?[parameters.Length];
         for (var i = 0; i < parameters.Length; i++)
@@ -85,9 +81,7 @@ public sealed class SimpleServiceProvider : IServiceProvider, IDisposable
         foreach (var singleton in _singletons.Values)
         {
             if (singleton is IDisposable disposable)
-            {
                 disposable.Dispose();
-            }
         }
 
         _singletons.Clear();
