@@ -10,6 +10,9 @@ public partial class ProgramMonitor : UserControl
 {
     private readonly DispatcherTimer _clipEndTimer;
     private readonly DispatcherTimer _timelineFrameTimer;
+    private DateTime _timelineFrameStartedAtUtc;
+    private TimeSpan _timelineFrameDuration;
+    private bool _playAudioWhenOpened;
     private bool _playWhenOpened;
     private int _handledPlaybackRequestVersion;
 
@@ -23,7 +26,10 @@ public partial class ProgramMonitor : UserControl
         };
         _clipEndTimer.Tick += ClipEndTimer_Tick;
 
-        _timelineFrameTimer = new DispatcherTimer();
+        _timelineFrameTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(50)
+        };
         _timelineFrameTimer.Tick += TimelineFrameTimer_Tick;
 
         DataContextChanged += ProgramMonitor_DataContextChanged;
@@ -52,6 +58,13 @@ public partial class ProgramMonitor : UserControl
             return;
         }
 
+        if (e.PropertyName == nameof(MainWindowViewModel.PreviewAudioSource))
+        {
+            _playAudioWhenOpened = false;
+            PreviewAudioElement.Stop();
+            return;
+        }
+
         if (e.PropertyName != nameof(MainWindowViewModel.PreviewPlaybackRequestVersion))
             return;
 
@@ -75,6 +88,8 @@ public partial class ProgramMonitor : UserControl
                 _clipEndTimer.Stop();
                 _timelineFrameTimer.Stop();
                 PreviewMediaElement.Pause();
+                _playAudioWhenOpened = false;
+                PreviewAudioElement.Pause();
                 break;
             case "Stop":
                 StopAtClipStart();
@@ -98,6 +113,7 @@ public partial class ProgramMonitor : UserControl
         _timelineFrameTimer.Stop();
         PreviewMediaElement.Position = viewModel.PreviewSourceStart;
         PreviewMediaElement.Play();
+        PlayAudioFromCurrentTimelineSegment();
         _clipEndTimer.Start();
     }
 
@@ -106,9 +122,11 @@ public partial class ProgramMonitor : UserControl
         var viewModel = ViewModel;
 
         _playWhenOpened = false;
+        _playAudioWhenOpened = false;
         _clipEndTimer.Stop();
         _timelineFrameTimer.Stop();
         PreviewMediaElement.Stop();
+        PreviewAudioElement.Stop();
 
         if (viewModel is not null)
             PreviewMediaElement.Position = viewModel.PreviewSourceStart;
@@ -137,7 +155,9 @@ public partial class ProgramMonitor : UserControl
     private void PreviewMediaElement_MediaFailed(object sender, ExceptionRoutedEventArgs e)
     {
         _playWhenOpened = false;
+        _playAudioWhenOpened = false;
         _clipEndTimer.Stop();
+        PreviewAudioElement.Stop();
         ViewModel?.FailPreviewPlayback();
     }
 
@@ -148,6 +168,8 @@ public partial class ProgramMonitor : UserControl
             return;
 
         var clipEnd = viewModel.PreviewSourceStart + viewModel.PreviewSourceDuration;
+        viewModel.UpdateTimelinePlaybackProgress(PreviewMediaElement.Position - viewModel.PreviewSourceStart);
+
         if (PreviewMediaElement.Position >= clipEnd)
             FinishPlayback();
     }
@@ -157,21 +179,67 @@ public partial class ProgramMonitor : UserControl
         _playWhenOpened = false;
         _clipEndTimer.Stop();
         PreviewMediaElement.Stop();
+        PlayAudioFromCurrentTimelineSegment();
 
         _timelineFrameTimer.Stop();
-        _timelineFrameTimer.Interval = duration > TimeSpan.Zero
+        _timelineFrameDuration = duration > TimeSpan.Zero
             ? duration
-            : TimeSpan.FromMilliseconds(1);
+            : TimeSpan.Zero;
+        _timelineFrameStartedAtUtc = DateTime.UtcNow;
         _timelineFrameTimer.Start();
+    }
+
+    private void PlayAudioFromCurrentTimelineSegment()
+    {
+        var viewModel = ViewModel;
+        if (viewModel?.PreviewAudioSource is null)
+        {
+            _playAudioWhenOpened = false;
+            PreviewAudioElement.Stop();
+            return;
+        }
+
+        _playAudioWhenOpened = true;
+        PreviewAudioElement.Position = viewModel.PreviewAudioSourceStart;
+        PreviewAudioElement.Play();
+    }
+
+    private void PreviewAudioElement_MediaOpened(object sender, RoutedEventArgs e)
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null)
+            return;
+
+        PreviewAudioElement.Position = viewModel.PreviewAudioSourceStart;
+
+        if (_playAudioWhenOpened)
+            PreviewAudioElement.Play();
+    }
+
+    private void PreviewAudioElement_MediaFailed(object sender, ExceptionRoutedEventArgs e)
+    {
+        _playAudioWhenOpened = false;
+        PreviewAudioElement.Stop();
     }
 
     private void TimelineFrameTimer_Tick(object? sender, EventArgs e)
     {
-        _timelineFrameTimer.Stop();
-
         var viewModel = ViewModel;
         if (viewModel is null)
             return;
+
+        var elapsed = DateTime.UtcNow - _timelineFrameStartedAtUtc;
+        if (elapsed < TimeSpan.Zero)
+            elapsed = TimeSpan.Zero;
+
+        if (elapsed < _timelineFrameDuration)
+        {
+            viewModel.UpdateTimelinePlaybackProgress(elapsed);
+            return;
+        }
+
+        viewModel.UpdateTimelinePlaybackProgress(_timelineFrameDuration);
+        _timelineFrameTimer.Stop();
 
         if (viewModel.IsTimelineGapPreview)
             viewModel.CompletePreviewPlayback();
@@ -190,6 +258,8 @@ public partial class ProgramMonitor : UserControl
         _clipEndTimer.Stop();
         _timelineFrameTimer.Stop();
         PreviewMediaElement.Stop();
+        _playAudioWhenOpened = false;
+        PreviewAudioElement.Stop();
 
         if (DataContext is INotifyPropertyChanged notify)
             notify.PropertyChanged -= ViewModel_PropertyChanged;
