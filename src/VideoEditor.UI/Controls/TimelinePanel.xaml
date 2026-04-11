@@ -5,44 +5,286 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
             <DockPanel Grid.Row="0" Margin="0,0,0,8">
                 <TextBlock Text="Timeline" Style="{StaticResource TitleTextStyle}" Margin="0" />
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                    <Button Content="-" Width="34" />
-                    <Button Content="+" Width="34" Margin="0" />
+                    <TextBlock Text="{Binding TimelineScaleLabel}"
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Margin="0,0,10,0" />
+                    <Slider Width="140"
+                            Minimum="0"
+                            Maximum="{Binding TimelineZoomMaxIndex}"
+                            Value="{Binding TimelineZoomIndex}"
+                            IsSnapToTickEnabled="True"
+                            TickFrequency="1"
+                            SmallChange="1"
+                            LargeChange="1"
+                            Margin="0,0,10,0"
+                            VerticalAlignment="Center" />
+                    <Button Content="Zoom -" Command="{Binding ZoomOutTimelineCommand}" />
+                    <Button Content="Zoom +" Command="{Binding ZoomInTimelineCommand}" />
+                    <Button Content="Add Video Track" Command="{Binding AddVideoTrackCommand}" />
+                    <Button Content="Add Audio Track" Command="{Binding AddAudioTrackCommand}" Margin="0" />
                 </StackPanel>
             </DockPanel>
 
-            <Grid Grid.Row="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="52" />
-                    <RowDefinition Height="52" />
-                </Grid.RowDefinitions>
+            <Border Grid.Row="1"
+                    Background="#171B22"
+                    BorderBrush="{StaticResource BorderBrushDark}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Margin="0,0,0,8">
+                <Grid Height="38">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="118" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-                <Border Grid.Row="0" Background="#1A2028" BorderBrush="{StaticResource BorderBrushDark}" BorderThickness="1" CornerRadius="4" Margin="0,0,0,8">
-                    <Grid>
-                        <TextBlock Text="V1" VerticalAlignment="Center" Margin="10,0" Foreground="{StaticResource TextMutedBrush}" />
-                        <Border Width="220" Height="32" HorizontalAlignment="Left" Margin="58,10,0,10" Background="#3A4A63" CornerRadius="3">
-                            <TextBlock Text="scene_01" VerticalAlignment="Center" Margin="10,0" />
-                        </Border>
-                        <Border Width="170" Height="32" HorizontalAlignment="Left" Margin="292,10,0,10" Background="#4F3E6E" CornerRadius="3">
-                            <TextBlock Text="intro" VerticalAlignment="Center" Margin="10,0" />
-                        </Border>
-                    </Grid>
-                </Border>
+                    <Border Grid.Column="0"
+                            Background="#161A20"
+                            BorderBrush="{StaticResource BorderBrushDark}"
+                            BorderThickness="0,0,1,0">
+                        <TextBlock Text="Time"
+                                   VerticalAlignment="Center"
+                                   Margin="14,0"
+                                   Foreground="{StaticResource TextMutedBrush}" />
+                    </Border>
 
-                <Border Grid.Row="1" Background="#1A2028" BorderBrush="{StaticResource BorderBrushDark}" BorderThickness="1" CornerRadius="4">
-                    <Grid>
-                        <TextBlock Text="A1" VerticalAlignment="Center" Margin="10,0" Foreground="{StaticResource TextMutedBrush}" />
-                        <Border Width="300" Height="32" HorizontalAlignment="Left" Margin="58,10,0,10" Background="#2E6A57" CornerRadius="3">
-                            <TextBlock Text="voiceover" VerticalAlignment="Center" Margin="10,0" />
-                        </Border>
+                    <Grid Grid.Column="1" ClipToBounds="True">
+                        <Canvas>
+                            <Canvas Width="{Binding TimelineCanvasWidth}">
+                                <Canvas.RenderTransform>
+                                    <TranslateTransform x:Name="RulerMarksTransform" />
+                                </Canvas.RenderTransform>
+                            <ItemsControl ItemsSource="{Binding TimelineRulerMarks}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <Canvas />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding Left}" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Width="96" IsHitTestVisible="False">
+                                            <Border Width="1"
+                                                    Height="{Binding TickHeight}"
+                                                    VerticalAlignment="Top"
+                                                    Background="{StaticResource BorderBrushDark}"
+                                                    Opacity="{Binding TickOpacity}" />
+                                            <TextBlock Text="{Binding Label}"
+                                                       Margin="4,20,0,0"
+                                                       Foreground="{StaticResource TextMutedBrush}"
+                                                       FontSize="10"
+                                                       Width="90"
+                                                       TextTrimming="None"
+                                                       Opacity="{Binding LabelOpacity}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            </Canvas>
+
+                            <Border Width="2"
+                                    Height="38"
+                                    Background="{StaticResource AccentBrush}"
+                                    Canvas.Left="160"
+                                    Opacity="0.9" />
+                        </Canvas>
                     </Grid>
-                </Border>
-            </Grid>
+                </Grid>
+            </Border>
+
+            <ScrollViewer Grid.Row="2"
+                          x:Name="TimelineScrollViewer"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto"
+                          ScrollChanged="TimelineScrollViewer_ScrollChanged"
+                          Background="#151920">
+                <StackPanel MinWidth="{Binding TimelineCanvasWidth}">
+                    <Border Background="#151920" Padding="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="VIDEO TRACKS"
+                                       Foreground="{StaticResource TextMutedBrush}"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,0,8" />
+
+                            <ItemsControl ItemsSource="{Binding VideoTimelineTracks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="118" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <Border Grid.Column="0"
+                                                    Height="58"
+                                                    Background="#171C24"
+                                                    BorderBrush="{StaticResource BorderBrushDark}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4,0,0,4">
+                                                <StackPanel VerticalAlignment="Center" Margin="12,0">
+                                                    <TextBlock Text="{Binding Header}" FontWeight="Bold" />
+                                                    <TextBlock Text="{Binding Title}"
+                                                               Foreground="{StaticResource TextMutedBrush}"
+                                                               FontSize="11"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </Border>
+
+                                            <Border Grid.Column="1"
+                                                    Height="58"
+                                                    Background="#10151C"
+                                                    BorderBrush="{StaticResource BorderBrushDark}"
+                                                    BorderThickness="0,1,1,1"
+                                                    CornerRadius="0,4,4,0"
+                                                    AllowDrop="True"
+                                                    Drop="TrackLane_Drop">
+                                                <Canvas Width="{Binding DataContext.TimelineCanvasWidth, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                                    <Border Width="2" Height="58" Background="{StaticResource AccentBrush}" Canvas.Left="160" Opacity="0.45" />
+                                                    <ItemsControl ItemsSource="{Binding Clips}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <Canvas />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemContainerStyle>
+                                                            <Style TargetType="ContentPresenter">
+                                                                <Setter Property="Canvas.Left" Value="{Binding Left}" />
+                                                            </Style>
+                                                        </ItemsControl.ItemContainerStyle>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Width="{Binding Width}"
+                                                                        Height="42"
+                                                                        Margin="0,8,0,8"
+                                                                        Background="{Binding BackgroundColor}"
+                                                                        BorderBrush="{Binding AccentColor}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="4"
+                                                                        PreviewMouseLeftButtonDown="Clip_PreviewMouseLeftButtonDown"
+                                                                        PreviewMouseMove="Clip_PreviewMouseMove">
+                                                                    <Grid>
+                                                                        <Border Width="4"
+                                                                                HorizontalAlignment="Left"
+                                                                                Background="{Binding AccentColor}"
+                                                                                CornerRadius="4,0,0,4" />
+                                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                                   Margin="12,0,10,0"
+                                                                                   VerticalAlignment="Center"
+                                                                                   TextTrimming="CharacterEllipsis" />
+                                                                    </Grid>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </Canvas>
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="#151920">
+                        <StackPanel>
+                            <TextBlock Text="AUDIO TRACKS"
+                                       Foreground="{StaticResource TextMutedBrush}"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,0,8" />
+
+                            <ItemsControl ItemsSource="{Binding AudioTimelineTracks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="118" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <Border Grid.Column="0"
+                                                    Height="58"
+                                                    Background="#171C24"
+                                                    BorderBrush="{StaticResource BorderBrushDark}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4,0,0,4">
+                                                <StackPanel VerticalAlignment="Center" Margin="12,0">
+                                                    <TextBlock Text="{Binding Header}" FontWeight="Bold" />
+                                                    <TextBlock Text="{Binding Title}"
+                                                               Foreground="{StaticResource TextMutedBrush}"
+                                                               FontSize="11"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </Border>
+
+                                            <Border Grid.Column="1"
+                                                    Height="58"
+                                                    Background="#10151C"
+                                                    BorderBrush="{StaticResource BorderBrushDark}"
+                                                    BorderThickness="0,1,1,1"
+                                                    CornerRadius="0,4,4,0"
+                                                    AllowDrop="True"
+                                                    Drop="TrackLane_Drop">
+                                                <Canvas Width="{Binding DataContext.TimelineCanvasWidth, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                                    <Border Width="2" Height="58" Background="{StaticResource AccentBrush}" Canvas.Left="160" Opacity="0.45" />
+                                                    <ItemsControl ItemsSource="{Binding Clips}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <Canvas />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemContainerStyle>
+                                                            <Style TargetType="ContentPresenter">
+                                                                <Setter Property="Canvas.Left" Value="{Binding Left}" />
+                                                            </Style>
+                                                        </ItemsControl.ItemContainerStyle>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border Width="{Binding Width}"
+                                                                        Height="42"
+                                                                        Margin="0,8,0,8"
+                                                                        Background="{Binding BackgroundColor}"
+                                                                        BorderBrush="{Binding AccentColor}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="4"
+                                                                        PreviewMouseLeftButtonDown="Clip_PreviewMouseLeftButtonDown"
+                                                                        PreviewMouseMove="Clip_PreviewMouseMove">
+                                                                    <Grid>
+                                                                        <Border Width="4"
+                                                                                HorizontalAlignment="Left"
+                                                                                Background="{Binding AccentColor}"
+                                                                                CornerRadius="4,0,0,4" />
+                                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                                   Margin="12,0,10,0"
+                                                                                   VerticalAlignment="Center"
+                                                                                   TextTrimming="CharacterEllipsis" />
+                                                                    </Grid>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </Canvas>
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
     </Border>
 </UserControl>

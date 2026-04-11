@@ -23,7 +23,7 @@ public sealed class TimelineClip : EntityBase
     /// <summary>
     /// 	Позиция начала клипа на таймлайне.
     /// </summary>
-    public TimeSpan TimelineStart { get; init; } = TimeSpan.Zero;
+    public TimeSpan TimelineStart { get; set; } = TimeSpan.Zero;
 
     /// <summary>
     /// 	Вычисляемая позиция конца клипа на таймлайне.

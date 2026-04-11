@@ -7,6 +7,17 @@ namespace VideoEditor.Application.Services;
 /// </summary>
 public sealed class MediaImportService : IMediaImportService
 {
+    private readonly IMediaDurationService _mediaDurationService;
+
+    /// <summary>
+    /// 	Инициализирует сервис импорта медиа.
+    /// </summary>
+    /// <param name="mediaDurationService"> Сервис чтения длительности медиафайлов. </param>
+    public MediaImportService(IMediaDurationService mediaDurationService)
+    {
+        _mediaDurationService = mediaDurationService;
+    }
+
     /// <inheritdoc />
     public IReadOnlyList<MediaAsset> Import(IEnumerable<string> filePaths)
     {
@@ -22,7 +33,7 @@ public sealed class MediaImportService : IMediaImportService
                 FilePath = path,
                 DisplayName = Path.GetFileName(path),
                 Type = mediaType,
-                Duration = TimeSpan.Zero
+                Duration = _mediaDurationService.GetDuration(path, mediaType)
             });
         }
 
