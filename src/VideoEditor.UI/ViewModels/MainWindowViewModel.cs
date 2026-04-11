@@ -26,10 +26,26 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly IMediaImportService _mediaImportService;
     private readonly IMediaThumbnailService _mediaThumbnailService;
     private readonly RelayCommand _insertSelectedMediaToTimelineCommand;
+    private readonly RelayCommand _playPreviewCommand;
+    private readonly RelayCommand _pausePreviewCommand;
+    private readonly RelayCommand _stopPreviewCommand;
     private readonly RelayCommand _zoomInTimelineCommand;
     private readonly RelayCommand _zoomOutTimelineCommand;
 
     private ImportedMediaItemViewModel? _selectedImportedMedia;
+    private Domain.Enums.MediaType? _previewMediaType;
+    private Guid? _previewClipId;
+    private bool _isTimelineGapPreview;
+    private bool _isTimelinePlaybackActive;
+    private TimeSpan _previewGapDuration;
+    private Uri? _previewMediaSource;
+    private TimeSpan _previewSourceDuration;
+    private TimeSpan _previewSourceStart;
+    private TimeSpan _previewTimelinePosition;
+    private string _previewPlaybackRequest = "Stop";
+    private int _previewPlaybackRequestVersion;
+    private string _previewStatusText = "Add a clip to the timeline, then select it for preview.";
+    private string _previewTitle = "No clip selected";
     private int _timelineZoomIndex;
 
     /// <summary>
@@ -107,6 +123,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand InsertSelectedMediaToTimelineCommand { get; }
 
     /// <summary>
+    /// 	Команда запуска предпросмотра выбранного клипа таймлайна.
+    /// </summary>
+    public ICommand PlayPreviewCommand { get; }
+
+    /// <summary>
+    /// 	Команда паузы предпросмотра.
+    /// </summary>
+    public ICommand PausePreviewCommand { get; }
+
+    /// <summary>
+    /// 	Команда остановки предпросмотра.
+    /// </summary>
+    public ICommand StopPreviewCommand { get; }
+
+    /// <summary>
     /// 	Команда добавления видеодорожки.
     /// </summary>
     public ICommand AddVideoTrackCommand { get; }
@@ -141,6 +172,163 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     /// </summary>
     public int TimelineZoomMaxIndex => TimelineZoomLevels.Length - 1;
 
+    public bool IsTimelineGapPreview
+    {
+        get => _isTimelineGapPreview;
+        private set
+        {
+            if (_isTimelineGapPreview == value)
+                return;
+
+            _isTimelineGapPreview = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsPreviewPlaceholderVisible));
+        }
+    }
+
+    public TimeSpan PreviewGapDuration
+    {
+        get => _previewGapDuration;
+        private set
+        {
+            if (_previewGapDuration == value)
+                return;
+
+            _previewGapDuration = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// 	Источник медиафайла для монитора предпросмотра.
+    /// </summary>
+    public Uri? PreviewMediaSource
+    {
+        get => _previewMediaSource;
+        private set
+        {
+            if (Equals(_previewMediaSource, value))
+                return;
+
+            _previewMediaSource = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasPreviewMedia));
+            OnPropertyChanged(nameof(IsPreviewImage));
+            OnPropertyChanged(nameof(IsPreviewPlayableMedia));
+            OnPropertyChanged(nameof(IsPreviewPlaceholderVisible));
+            OnPropertyChanged(nameof(PreviewImageSource));
+            OnPropertyChanged(nameof(PreviewPlayableMediaSource));
+        }
+    }
+
+    /// <summary>
+    /// 	Начало фрагмента внутри исходного файла.
+    /// </summary>
+    public TimeSpan PreviewSourceStart
+    {
+        get => _previewSourceStart;
+        private set
+        {
+            if (_previewSourceStart == value)
+                return;
+
+            _previewSourceStart = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// 	Длительность фрагмента для предпросмотра.
+    /// </summary>
+    public TimeSpan PreviewSourceDuration
+    {
+        get => _previewSourceDuration;
+        private set
+        {
+            if (_previewSourceDuration == value)
+                return;
+
+            _previewSourceDuration = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// 	Последнее действие, которое должен выполнить монитор предпросмотра.
+    /// </summary>
+    public string PreviewPlaybackRequest
+    {
+        get => _previewPlaybackRequest;
+        private set
+        {
+            if (_previewPlaybackRequest == value)
+                return;
+
+            _previewPlaybackRequest = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// 	Версия команды предпросмотра, чтобы повторные Play/Stop не терялись в биндинге.
+    /// </summary>
+    public int PreviewPlaybackRequestVersion
+    {
+        get => _previewPlaybackRequestVersion;
+        private set
+        {
+            if (_previewPlaybackRequestVersion == value)
+                return;
+
+            _previewPlaybackRequestVersion = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// 	Заголовок текущего клипа в мониторе.
+    /// </summary>
+    public string PreviewTitle
+    {
+        get => _previewTitle;
+        private set
+        {
+            if (_previewTitle == value)
+                return;
+
+            _previewTitle = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// 	Текст состояния монитора предпросмотра.
+    /// </summary>
+    public string PreviewStatusText
+    {
+        get => _previewStatusText;
+        private set
+        {
+            if (_previewStatusText == value)
+                return;
+
+            _previewStatusText = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool HasPreviewMedia => PreviewMediaSource is not null;
+
+    public bool IsPreviewImage => HasPreviewMedia && _previewMediaType == Domain.Enums.MediaType.Image;
+
+    public bool IsPreviewPlayableMedia => HasPreviewMedia && _previewMediaType != Domain.Enums.MediaType.Image;
+
+    public bool IsPreviewPlaceholderVisible => !HasPreviewMedia && !IsTimelineGapPreview;
+
+    public Uri? PreviewImageSource => IsPreviewImage ? PreviewMediaSource : null;
+
+    public Uri? PreviewPlayableMediaSource => IsPreviewPlayableMedia ? PreviewMediaSource : null;
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>
@@ -162,11 +350,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         CurrentProject = projectBootstrapService.CreateDefaultProject("Diploma Project");
         ProjectDirectory = projectPathService.BuildProjectDirectory(CurrentProject.Name);
         _insertSelectedMediaToTimelineCommand = new RelayCommand(InsertSelectedMediaToTimeline, CanInsertSelectedMediaToTimeline);
+        _playPreviewCommand = new RelayCommand(PlayPreview, CanPlayPreview);
+        _pausePreviewCommand = new RelayCommand(PausePreview, CanControlPreview);
+        _stopPreviewCommand = new RelayCommand(StopPreview, CanControlPreview);
         _zoomInTimelineCommand = new RelayCommand(ZoomInTimeline, CanZoomInTimeline);
         _zoomOutTimelineCommand = new RelayCommand(ZoomOutTimeline, CanZoomOutTimeline);
 
         ImportMediaCommand = new RelayCommand(ImportMedia);
         InsertSelectedMediaToTimelineCommand = _insertSelectedMediaToTimelineCommand;
+        PlayPreviewCommand = _playPreviewCommand;
+        PausePreviewCommand = _pausePreviewCommand;
+        StopPreviewCommand = _stopPreviewCommand;
         AddVideoTrackCommand = new RelayCommand(AddVideoTrack);
         AddAudioTrackCommand = new RelayCommand(AddAudioTrack);
         ZoomInTimelineCommand = _zoomInTimelineCommand;
@@ -232,42 +426,57 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         if (asset.Type == Domain.Enums.MediaType.Audio)
         {
             var audioTrack = EnsureTrack("Audio");
-            AddClipToTrack(audioTrack, asset, TimeSpan.Zero, ResolveClipDuration(asset));
+            var clip = AddClipToTrack(audioTrack, asset, ResolveAppendStart(audioTrack), ResolveClipDuration(asset));
             RefreshTimelinePresentation();
+            SelectClipForPreviewIfNone(clip.Id);
             return;
         }
 
         if (asset.Type == Domain.Enums.MediaType.Image)
         {
             var videoTrack = EnsureTrack("Video");
-            AddClipToTrack(videoTrack, asset, TimeSpan.Zero, ResolveClipDuration(asset));
+            var clip = AddClipToTrack(videoTrack, asset, ResolveAppendStart(videoTrack), ResolveClipDuration(asset));
             RefreshTimelinePresentation();
+            SelectClipForPreviewIfNone(clip.Id);
             return;
         }
 
-        InsertVideoWithAudio(asset);
+        var videoClip = InsertVideoWithAudio(asset);
         RefreshTimelinePresentation();
+        SelectClipForPreviewIfNone(videoClip.Id);
     }
 
-    private void InsertVideoWithAudio(MediaAsset asset)
+    private TimelineClip InsertVideoWithAudio(MediaAsset asset)
     {
         var videoTrack = EnsureTrack("Video");
         var audioTrack = EnsureTrack("Audio");
         var duration = ResolveClipDuration(asset);
+        var timelineStart = ResolveAppendStart(videoTrack);
 
-        AddClipToTrack(videoTrack, asset, TimeSpan.Zero, duration);
-        AddClipToTrack(audioTrack, asset, TimeSpan.Zero, duration);
+        var videoClip = AddClipToTrack(videoTrack, asset, timelineStart, duration);
+        AddClipToTrack(audioTrack, asset, timelineStart, duration);
+        return videoClip;
     }
 
-    private void AddClipToTrack(TimelineTrack track, MediaAsset asset, TimeSpan timelineStart, TimeSpan duration)
+    private TimelineClip AddClipToTrack(TimelineTrack track, MediaAsset asset, TimeSpan timelineStart, TimeSpan duration)
     {
-        track.Clips.Add(new TimelineClip
+        var clip = new TimelineClip
         {
             MediaAssetId = asset.Id,
             SourceStart = TimeSpan.Zero,
             SourceDuration = duration,
             TimelineStart = timelineStart
-        });
+        };
+
+        track.Clips.Add(clip);
+        return clip;
+    }
+
+    private static TimeSpan ResolveAppendStart(TimelineTrack track)
+    {
+        return track.Clips.Count == 0
+            ? TimeSpan.Zero
+            : track.Clips.Max(x => x.TimelineEnd);
     }
 
     private TimelineTrack EnsureTrack(string kind)
@@ -537,6 +746,242 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         RefreshTimelinePresentation();
     }
 
+    public void SelectClipForPreview(Guid clipId)
+    {
+        var clip = CurrentProject.Tracks
+            .SelectMany(x => x.Clips)
+            .FirstOrDefault(x => x.Id == clipId);
+
+        if (clip is null)
+            return;
+
+        var asset = CurrentProject.MediaAssets.FirstOrDefault(x => x.Id == clip.MediaAssetId);
+        if (asset is null || string.IsNullOrWhiteSpace(asset.FilePath))
+            return;
+
+        _previewClipId = clip.Id;
+        IsTimelineGapPreview = false;
+        _previewMediaType = asset.Type;
+        PreviewSourceStart = clip.SourceStart;
+        PreviewSourceDuration = clip.SourceDuration;
+        _previewTimelinePosition = clip.TimelineStart;
+        PreviewTitle = asset.DisplayName;
+        PreviewStatusText = asset.Type == Domain.Enums.MediaType.Image
+            ? "Image clip selected."
+            : "Clip selected. Press Play to preview.";
+        PreviewMediaSource = new Uri(asset.FilePath, UriKind.Absolute);
+
+        OnPropertyChanged(nameof(IsPreviewImage));
+        OnPropertyChanged(nameof(IsPreviewPlayableMedia));
+        OnPropertyChanged(nameof(IsPreviewPlaceholderVisible));
+        OnPropertyChanged(nameof(PreviewImageSource));
+        OnPropertyChanged(nameof(PreviewPlayableMediaSource));
+        _playPreviewCommand.RaiseCanExecuteChanged();
+        _pausePreviewCommand.RaiseCanExecuteChanged();
+        _stopPreviewCommand.RaiseCanExecuteChanged();
+    }
+
+    private void SelectClipForPreviewIfNone(Guid clipId)
+    {
+        if (HasPreviewMedia)
+            return;
+
+        SelectClipForPreview(clipId);
+    }
+
+    public void CompletePreviewPlayback()
+    {
+        if (!_isTimelinePlaybackActive)
+        {
+            if (HasPreviewMedia)
+                PreviewStatusText = "Preview finished.";
+
+            return;
+        }
+
+        _previewTimelinePosition = IsTimelineGapPreview
+            ? _previewTimelinePosition + PreviewGapDuration
+            : _previewTimelinePosition + PreviewSourceDuration;
+
+        PlayTimelineFromPosition(_previewTimelinePosition);
+    }
+
+    public void CompletePreviewImageFrame()
+    {
+        if (!_isTimelinePlaybackActive)
+            return;
+
+        CompletePreviewPlayback();
+    }
+
+    public void FailPreviewPlayback()
+    {
+        if (!HasPreviewMedia)
+            return;
+
+        PreviewStatusText = "Could not play this media file.";
+    }
+
+    private bool CanPlayPreview()
+    {
+        return FindFirstPreviewableClip() is not null;
+    }
+
+    private bool CanControlPreview()
+    {
+        return HasPreviewMedia || IsTimelineGapPreview;
+    }
+
+    private void PlayPreview()
+    {
+        _isTimelinePlaybackActive = true;
+        _previewTimelinePosition = TimeSpan.Zero;
+        PlayTimelineFromPosition(_previewTimelinePosition);
+    }
+
+    private void PausePreview()
+    {
+        if (!HasPreviewMedia && !IsTimelineGapPreview)
+            return;
+
+        PreviewStatusText = IsTimelineGapPreview ? "Timeline gap paused." : "Preview paused.";
+        RequestPreviewPlayback("Pause");
+    }
+
+    private void StopPreview()
+    {
+        if (!HasPreviewMedia && !IsTimelineGapPreview)
+            return;
+
+        _isTimelinePlaybackActive = false;
+        IsTimelineGapPreview = false;
+        PreviewGapDuration = TimeSpan.Zero;
+        PreviewStatusText = "Preview stopped.";
+        RequestPreviewPlayback("Stop");
+    }
+
+    private void PlayTimelineFromPosition(TimeSpan timelinePosition)
+    {
+        var nextClip = FindTimelineClipAtOrAfter(timelinePosition);
+        if (nextClip is null)
+        {
+            _isTimelinePlaybackActive = false;
+            IsTimelineGapPreview = false;
+            PreviewGapDuration = TimeSpan.Zero;
+            PreviewMediaSource = null;
+            PreviewTitle = "Timeline finished";
+            PreviewStatusText = "Timeline playback finished.";
+            RequestPreviewPlayback("Stop");
+            return;
+        }
+
+        if (nextClip.TimelineStart > timelinePosition)
+        {
+            PlayTimelineGap(nextClip.TimelineStart - timelinePosition, timelinePosition);
+            return;
+        }
+
+        SelectClipForTimelinePlayback(nextClip, timelinePosition);
+    }
+
+    private void PlayTimelineGap(TimeSpan duration, TimeSpan timelinePosition)
+    {
+        _previewClipId = null;
+        _previewMediaType = null;
+        _previewTimelinePosition = timelinePosition;
+        PreviewGapDuration = duration;
+        IsTimelineGapPreview = true;
+        PreviewMediaSource = null;
+        PreviewTitle = "Timeline gap";
+        PreviewStatusText = $"Black screen for {duration.TotalSeconds:0.##} sec.";
+        RequestPreviewPlayback("Gap");
+    }
+
+    private void SelectClipForTimelinePlayback(TimelineClip clip, TimeSpan timelinePosition)
+    {
+        var asset = CurrentProject.MediaAssets.FirstOrDefault(x => x.Id == clip.MediaAssetId);
+        if (asset is null || string.IsNullOrWhiteSpace(asset.FilePath))
+        {
+            _previewTimelinePosition = clip.TimelineEnd;
+            PlayTimelineFromPosition(_previewTimelinePosition);
+            return;
+        }
+
+        var offsetInsideClip = timelinePosition - clip.TimelineStart;
+        if (offsetInsideClip < TimeSpan.Zero)
+            offsetInsideClip = TimeSpan.Zero;
+
+        _previewClipId = clip.Id;
+        _previewMediaType = asset.Type;
+        _previewTimelinePosition = timelinePosition;
+        PreviewGapDuration = TimeSpan.Zero;
+        IsTimelineGapPreview = false;
+        PreviewSourceStart = clip.SourceStart + offsetInsideClip;
+        PreviewSourceDuration = clip.SourceDuration - offsetInsideClip;
+        PreviewTitle = asset.DisplayName;
+        PreviewMediaSource = new Uri(asset.FilePath, UriKind.Absolute);
+
+        if (IsPreviewImage)
+        {
+            PreviewStatusText = "Showing image on timeline.";
+            RequestPreviewPlayback("ImageFrame");
+            return;
+        }
+
+        PreviewStatusText = "Playing timeline.";
+        RequestPreviewPlayback("Play");
+    }
+
+    private TimelineClip? FindFirstPreviewableClip()
+    {
+        return CurrentProject.Tracks
+            .Where(x => IsTrackOfKind(x, "Video"))
+            .SelectMany(x => x.Clips)
+            .OrderBy(x => x.TimelineStart)
+            .FirstOrDefault()
+            ?? CurrentProject.Tracks
+                .SelectMany(x => x.Clips)
+                .OrderBy(x => x.TimelineStart)
+                .FirstOrDefault();
+    }
+
+    private TimelineClip? FindNextTimelinePreviewClip()
+    {
+        if (_previewClipId is null)
+            return null;
+
+        var currentClip = CurrentProject.Tracks
+            .Where(x => IsTrackOfKind(x, "Video"))
+            .SelectMany(x => x.Clips)
+            .FirstOrDefault(x => x.Id == _previewClipId);
+
+        if (currentClip is null)
+            return null;
+
+        return CurrentProject.Tracks
+            .Where(x => IsTrackOfKind(x, "Video"))
+            .SelectMany(x => x.Clips)
+            .Where(x => x.Id != currentClip.Id && x.TimelineStart >= currentClip.TimelineEnd)
+            .OrderBy(x => x.TimelineStart)
+            .FirstOrDefault();
+    }
+
+    private TimelineClip? FindTimelineClipAtOrAfter(TimeSpan timelinePosition)
+    {
+        return CurrentProject.Tracks
+            .Where(x => IsTrackOfKind(x, "Video"))
+            .SelectMany(x => x.Clips)
+            .Where(x => x.TimelineEnd > timelinePosition)
+            .OrderBy(x => x.TimelineStart)
+            .FirstOrDefault();
+    }
+
+    private void RequestPreviewPlayback(string request)
+    {
+        PreviewPlaybackRequest = request;
+        PreviewPlaybackRequestVersion++;
+    }
+
     private void MoveLinkedClip(Guid mediaAssetId, Guid movedClipId, TimeSpan oldStart, TimeSpan newStart)
     {
         var linkedClip = CurrentProject.Tracks
@@ -560,6 +1005,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         RefreshTimelineTracks();
         _zoomInTimelineCommand?.RaiseCanExecuteChanged();
         _zoomOutTimelineCommand?.RaiseCanExecuteChanged();
+        _playPreviewCommand?.RaiseCanExecuteChanged();
+        _pausePreviewCommand?.RaiseCanExecuteChanged();
+        _stopPreviewCommand?.RaiseCanExecuteChanged();
         OnPropertyChanged(nameof(TimelineZoomMaxIndex));
     }
 
