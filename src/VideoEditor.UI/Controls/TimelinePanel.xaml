@@ -12,6 +12,11 @@
             <DockPanel Grid.Row="0" Margin="0,0,0,8">
                 <TextBlock Text="Timeline" Style="{StaticResource TitleTextStyle}" Margin="0" />
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                    <TextBlock Text="{Binding TimelinePlaybackPositionLabel}"
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource AccentBrush}"
+                               FontWeight="SemiBold"
+                               Margin="0,0,14,0" />
                     <TextBlock Text="{Binding TimelineScaleLabel}"
                                VerticalAlignment="Center"
                                Foreground="{StaticResource TextMutedBrush}"
@@ -55,49 +60,55 @@
                                    Foreground="{StaticResource TextMutedBrush}" />
                     </Border>
 
-                    <Grid Grid.Column="1" ClipToBounds="True">
+                    <Grid Grid.Column="1"
+                          x:Name="TimelineRuler"
+                          ClipToBounds="True"
+                          Cursor="Hand"
+                          PreviewMouseLeftButtonDown="TimelineRuler_PreviewMouseLeftButtonDown"
+                          PreviewMouseLeftButtonUp="TimelineRuler_PreviewMouseLeftButtonUp"
+                          PreviewMouseMove="TimelineRuler_PreviewMouseMove">
                         <Canvas>
                             <Canvas Width="{Binding TimelineCanvasWidth}">
                                 <Canvas.RenderTransform>
                                     <TranslateTransform x:Name="RulerMarksTransform" />
                                 </Canvas.RenderTransform>
-                            <ItemsControl ItemsSource="{Binding TimelineRulerMarks}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <Canvas />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemContainerStyle>
-                                    <Style TargetType="ContentPresenter">
-                                        <Setter Property="Canvas.Left" Value="{Binding Left}" />
-                                    </Style>
-                                </ItemsControl.ItemContainerStyle>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Width="96" IsHitTestVisible="False">
-                                            <Border Width="1"
-                                                    Height="{Binding TickHeight}"
-                                                    VerticalAlignment="Top"
-                                                    Background="{StaticResource BorderBrushDark}"
-                                                    Opacity="{Binding TickOpacity}" />
-                                            <TextBlock Text="{Binding Label}"
-                                                       Margin="4,20,0,0"
-                                                       Foreground="{StaticResource TextMutedBrush}"
-                                                       FontSize="10"
-                                                       Width="90"
-                                                       TextTrimming="None"
-                                                       Opacity="{Binding LabelOpacity}" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            </Canvas>
+                                <ItemsControl ItemsSource="{Binding TimelineRulerMarks}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter Property="Canvas.Left" Value="{Binding Left}" />
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Width="96" IsHitTestVisible="False">
+                                                <Border Width="1"
+                                                        Height="{Binding TickHeight}"
+                                                        VerticalAlignment="Top"
+                                                        Background="{StaticResource BorderBrushDark}"
+                                                        Opacity="{Binding TickOpacity}" />
+                                                <TextBlock Text="{Binding Label}"
+                                                           Margin="4,20,0,0"
+                                                           Foreground="{StaticResource TextMutedBrush}"
+                                                           FontSize="10"
+                                                           Width="90"
+                                                           TextTrimming="None"
+                                                           Opacity="{Binding LabelOpacity}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
 
-                            <Border Width="2"
-                                    Height="38"
-                                    Background="{StaticResource AccentBrush}"
-                                    Canvas.Left="160"
-                                    Opacity="0.9" />
+                                <Border Width="2"
+                                        Height="38"
+                                        Background="{StaticResource AccentBrush}"
+                                        Canvas.Left="{Binding TimelinePlayheadCanvasLeft}"
+                                        Opacity="0.9" />
+                            </Canvas>
                         </Canvas>
                     </Grid>
                 </Grid>
@@ -151,7 +162,11 @@
                                                     AllowDrop="True"
                                                     Drop="TrackLane_Drop">
                                                 <Canvas Width="{Binding DataContext.TimelineCanvasWidth, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                                                    <Border Width="2" Height="58" Background="{StaticResource AccentBrush}" Canvas.Left="160" Opacity="0.45" />
+                                                    <Border Width="2"
+                                                            Height="58"
+                                                            Background="{StaticResource AccentBrush}"
+                                                            Canvas.Left="{Binding DataContext.TimelinePlayheadCanvasLeft, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            Opacity="0.45" />
                                                     <ItemsControl ItemsSource="{Binding Clips}">
                                                         <ItemsControl.ItemsPanel>
                                                             <ItemsPanelTemplate>
@@ -173,7 +188,14 @@
                                                                         BorderThickness="1"
                                                                         CornerRadius="4"
                                                                         PreviewMouseLeftButtonDown="Clip_PreviewMouseLeftButtonDown"
+                                                                        PreviewMouseRightButtonDown="Clip_PreviewMouseRightButtonDown"
                                                                         PreviewMouseMove="Clip_PreviewMouseMove">
+                                                                    <Border.ContextMenu>
+                                                                        <ContextMenu>
+                                                                            <MenuItem Header="Delete clip"
+                                                                                      Click="DeleteClipMenuItem_Click" />
+                                                                        </ContextMenu>
+                                                                    </Border.ContextMenu>
                                                                     <Grid>
                                                                         <Border Width="4"
                                                                                 HorizontalAlignment="Left"
@@ -238,7 +260,11 @@
                                                     AllowDrop="True"
                                                     Drop="TrackLane_Drop">
                                                 <Canvas Width="{Binding DataContext.TimelineCanvasWidth, RelativeSource={RelativeSource AncestorType=UserControl}}">
-                                                    <Border Width="2" Height="58" Background="{StaticResource AccentBrush}" Canvas.Left="160" Opacity="0.45" />
+                                                    <Border Width="2"
+                                                            Height="58"
+                                                            Background="{StaticResource AccentBrush}"
+                                                            Canvas.Left="{Binding DataContext.TimelinePlayheadCanvasLeft, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            Opacity="0.45" />
                                                     <ItemsControl ItemsSource="{Binding Clips}">
                                                         <ItemsControl.ItemsPanel>
                                                             <ItemsPanelTemplate>
@@ -260,7 +286,14 @@
                                                                         BorderThickness="1"
                                                                         CornerRadius="4"
                                                                         PreviewMouseLeftButtonDown="Clip_PreviewMouseLeftButtonDown"
+                                                                        PreviewMouseRightButtonDown="Clip_PreviewMouseRightButtonDown"
                                                                         PreviewMouseMove="Clip_PreviewMouseMove">
+                                                                    <Border.ContextMenu>
+                                                                        <ContextMenu>
+                                                                            <MenuItem Header="Delete clip"
+                                                                                      Click="DeleteClipMenuItem_Click" />
+                                                                        </ContextMenu>
+                                                                    </Border.ContextMenu>
                                                                     <Grid>
                                                                         <Border Width="4"
                                                                                 HorizontalAlignment="Left"

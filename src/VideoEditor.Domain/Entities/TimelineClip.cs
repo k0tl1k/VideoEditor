@@ -11,6 +11,11 @@ public sealed class TimelineClip : EntityBase
     public Guid MediaAssetId { get; init; }
 
     /// <summary>
+    /// 	Идентификатор группы связанных клипов (например, видео и аудио одного файла).
+    /// </summary>
+    public Guid? LinkedGroupId { get; init; }
+
+    /// <summary>
     /// 	Точка начала в исходном файле.
     /// </summary>
     public TimeSpan SourceStart { get; init; } = TimeSpan.Zero;

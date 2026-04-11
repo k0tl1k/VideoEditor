@@ -36,6 +36,14 @@
                                   MediaFailed="PreviewMediaElement_MediaFailed"
                                   Visibility="{Binding IsPreviewPlayableMedia, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
+                    <MediaElement x:Name="PreviewAudioElement"
+                                  Source="{Binding PreviewAudioSource}"
+                                  LoadedBehavior="Manual"
+                                  UnloadedBehavior="Stop"
+                                  MediaOpened="PreviewAudioElement_MediaOpened"
+                                  MediaFailed="PreviewAudioElement_MediaFailed"
+                                  Visibility="Collapsed" />
+
                     <Image Source="{Binding PreviewImageSource}"
                            Stretch="Uniform"
                            Visibility="{Binding IsPreviewImage, Converter={StaticResource BooleanToVisibilityConverter}}" />
