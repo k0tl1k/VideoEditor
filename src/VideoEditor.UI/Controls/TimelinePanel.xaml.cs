@@ -21,6 +21,9 @@ public partial class TimelinePanel : UserControl
     {
         _dragStartPoint = e.GetPosition(this);
         _dragClip = (sender as FrameworkElement)?.DataContext as TimelineClipItemViewModel;
+
+        if (_dragClip is not null && DataContext is MainWindowViewModel viewModel)
+            viewModel.SelectClipForPreview(_dragClip.ClipId);
     }
 
     private void Clip_PreviewMouseMove(object sender, MouseEventArgs e)
