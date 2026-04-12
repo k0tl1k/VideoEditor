@@ -21,4 +21,14 @@ public partial class TopBar : UserControl
 
         window.ShowDialog();
     }
+
+    private void AboutButton_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new AboutWindow
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        window.ShowDialog();
+    }
 }

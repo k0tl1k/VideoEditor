@@ -8,10 +8,12 @@ namespace VideoEditor.UI.Controls;
 public partial class TimelinePanel : UserControl
 {
     private const string TimelineClipDragFormat = "VideoEditor.TimelineClip";
+    private const string ImportedMediaDragFormat = "VideoEditor.ImportedMedia";
 
     private Point? _dragStartPoint;
     private TimelineClipItemViewModel? _dragClip;
     private bool _isDraggingRulerPlayhead;
+    private bool _isSynchronizingTimelineHorizontalScroll;
 
     public TimelinePanel()
     {
@@ -48,39 +50,56 @@ public partial class TimelinePanel : UserControl
 
     private void TimelineRuler_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        _isDraggingRulerPlayhead = true;
-        TimelineRuler.CaptureMouse();
-        SetTimelinePositionFromRuler(e);
-        e.Handled = true;
+        // No longer used; the top ruler panel handles direct clicks and drags.
     }
 
     private void TimelineRuler_PreviewMouseMove(object sender, MouseEventArgs e)
     {
-        if (!_isDraggingRulerPlayhead || e.LeftButton != MouseButtonState.Pressed)
-            return;
-
-        SetTimelinePositionFromRuler(e);
-        e.Handled = true;
+        // No longer used; the top ruler panel handles direct clicks and drags.
     }
 
     private void TimelineRuler_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-        if (!_isDraggingRulerPlayhead)
-            return;
+        // No longer used; the top ruler panel handles direct clicks and drags.
+    }
 
-        SetTimelinePositionFromRuler(e);
-        _isDraggingRulerPlayhead = false;
-        TimelineRuler.ReleaseMouseCapture();
+    private void TimelineRulerPanel_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _isDraggingRulerPlayhead = true;
+        TimelineRulerPanel.CaptureMouse();
+        SetTimelinePositionFromRulerPanel(e);
         e.Handled = true;
     }
 
-    private void SetTimelinePositionFromRuler(MouseEventArgs e)
+    private void TimelineRulerPanel_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_isDraggingRulerPlayhead || e.LeftButton != MouseButtonState.Pressed)
+            return;
+
+        SetTimelinePositionFromRulerPanel(e);
+        e.Handled = true;
+    }
+
+    private void TimelineRulerPanel_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_isDraggingRulerPlayhead)
+            return;
+
+        SetTimelinePositionFromRulerPanel(e);
+        _isDraggingRulerPlayhead = false;
+        TimelineRulerPanel.ReleaseMouseCapture();
+        e.Handled = true;
+    }
+
+    private void SetTimelinePositionFromRulerPanel(MouseEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel)
             return;
 
-        var position = e.GetPosition(TimelineRuler);
-        viewModel.SetTimelinePlaybackPositionFromCanvasLeft(position.X + TimelineScrollViewer.HorizontalOffset);
+        var position = e.GetPosition(TimelineRulerPanel);
+        var rulerLeftOffset = 118d;
+        var canvasLeft = Math.Max(0, position.X - rulerLeftOffset) + TimelineScrollViewer.HorizontalOffset;
+        viewModel.SetTimelinePlaybackPositionFromCanvasLeft(canvasLeft);
     }
 
     private void Clip_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -104,13 +123,7 @@ public partial class TimelinePanel : UserControl
 
     private void TrackLane_Drop(object sender, DragEventArgs e)
     {
-        if (!e.Data.GetDataPresent(TimelineClipDragFormat))
-            return;
-
         if (DataContext is not MainWindowViewModel viewModel)
-            return;
-
-        if (e.Data.GetData(TimelineClipDragFormat) is not TimelineClipItemViewModel clip)
             return;
 
         if ((sender as FrameworkElement)?.DataContext is not TimelineTrackItemViewModel track)
@@ -119,6 +132,21 @@ public partial class TimelinePanel : UserControl
         var lane = (FrameworkElement)sender;
         var position = e.GetPosition(lane);
         var targetLeft = position.X + TimelineScrollViewer.HorizontalOffset;
+
+        if (e.Data.GetDataPresent(ImportedMediaDragFormat) &&
+            e.Data.GetData(ImportedMediaDragFormat) is ImportedMediaItemViewModel media)
+        {
+            viewModel.InsertMediaToTimeline(media.Asset, targetLeft);
+            e.Handled = true;
+            return;
+        }
+
+        if (!e.Data.GetDataPresent(TimelineClipDragFormat))
+            return;
+
+        if (e.Data.GetData(TimelineClipDragFormat) is not TimelineClipItemViewModel clip)
+            return;
+
         viewModel.MoveClip(clip.ClipId, track.TrackName, targetLeft);
     }
 
@@ -134,11 +162,44 @@ public partial class TimelinePanel : UserControl
     private void TimelineScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
         RulerMarksTransform.X = -e.HorizontalOffset;
+
+        if (_isSynchronizingTimelineHorizontalScroll)
+            return;
+
+        _isSynchronizingTimelineHorizontalScroll = true;
+        try
+        {
+            TimelineHorizontalScrollBar.Maximum = Math.Max(0, e.ExtentWidth - e.ViewportWidth);
+            TimelineHorizontalScrollBar.ViewportSize = e.ViewportWidth;
+            TimelineHorizontalScrollBar.LargeChange = Math.Max(1, e.ViewportWidth);
+            TimelineHorizontalScrollBar.SmallChange = Math.Max(1, e.ViewportWidth / 10);
+            TimelineHorizontalScrollBar.Value = e.HorizontalOffset;
+        }
+        finally
+        {
+            _isSynchronizingTimelineHorizontalScroll = false;
+        }
     }
 
     private void TimelineScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         TimelineVerticalScrollViewer.ScrollToVerticalOffset(TimelineVerticalScrollViewer.VerticalOffset - e.Delta);
         e.Handled = true;
+    }
+
+    private void TimelineHorizontalScrollBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_isSynchronizingTimelineHorizontalScroll)
+            return;
+
+        _isSynchronizingTimelineHorizontalScroll = true;
+        try
+        {
+            TimelineScrollViewer.ScrollToHorizontalOffset(e.NewValue);
+        }
+        finally
+        {
+            _isSynchronizingTimelineHorizontalScroll = false;
+        }
     }
 }

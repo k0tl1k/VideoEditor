@@ -7,20 +7,47 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <DockPanel Grid.Row="0" Margin="0,0,0,8">
-                <TextBlock Text="Timeline" Style="{StaticResource TitleTextStyle}" Margin="0" />
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+            <Grid Grid.Row="0" Margin="0,0,0,10" VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="26"
+                            Height="26"
+                            CornerRadius="8"
+                            Background="#243552"
+                            Margin="0,0,8,0">
+                        <TextBlock Text="T"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="{StaticResource AccentWarmBrush}"
+                                   FontWeight="Black" />
+                    </Border>
+                    <TextBlock Text="Timeline"
+                               FontSize="15"
+                               FontWeight="Black"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               Margin="0,-1,0,0"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
                     <TextBlock Text="{Binding TimelinePlaybackPositionLabel}"
                                VerticalAlignment="Center"
                                Foreground="{StaticResource AccentBrush}"
                                FontWeight="SemiBold"
-                               Margin="0,0,14,0" />
+                               Margin="0,0,18,0" />
                     <TextBlock Text="{Binding TimelineScaleLabel}"
                                VerticalAlignment="Center"
                                Foreground="{StaticResource TextMutedBrush}"
-                               Margin="0,0,10,0" />
+                               Margin="0,0,12,0" />
                     <Slider Width="140"
                             Minimum="0"
                             Maximum="{Binding TimelineZoomMaxIndex}"
@@ -29,21 +56,81 @@
                             TickFrequency="1"
                             SmallChange="1"
                             LargeChange="1"
-                            Margin="0,0,10,0"
+                            Margin="0,0,12,0"
                             VerticalAlignment="Center" />
-                    <Button Content="Zoom -" Command="{Binding ZoomOutTimelineCommand}" />
-                    <Button Content="Zoom +" Command="{Binding ZoomInTimelineCommand}" />
-                    <Button Content="Add Video Track" Command="{Binding AddVideoTrackCommand}" />
-                    <Button Content="Add Audio Track" Command="{Binding AddAudioTrackCommand}" Margin="0" />
+                    <Button Command="{Binding ZoomOutTimelineCommand}"
+                            Tag="zoom-out.svg"
+                            ToolTip="Zoom out"
+                            Width="36"
+                            Height="36"
+                            Margin="0,0,8,0"
+                            Padding="0"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center">
+                        <Image Width="14"
+                               Height="14"
+                               Stretch="Uniform"
+                               Margin="2"
+                               Source="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Tag, Converter={StaticResource IconFileToImageSourceConverter}}" />
+                    </Button>
+                    <Button Command="{Binding ZoomInTimelineCommand}"
+                            Tag="zoom-in.svg"
+                            ToolTip="Zoom in"
+                            Width="36"
+                            Height="36"
+                            Margin="0,0,8,0"
+                            Padding="0"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center">
+                        <Image Width="14"
+                               Height="14"
+                               Stretch="Uniform"
+                               Margin="2"
+                               Source="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Tag, Converter={StaticResource IconFileToImageSourceConverter}}" />
+                    </Button>
+                    <Button Command="{Binding AddVideoTrackCommand}"
+                            Tag="video.svg"
+                            ToolTip="Add video track"
+                            Width="36"
+                            Height="36"
+                            Margin="0,0,8,0"
+                            Padding="0"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center">
+                        <Image Width="14"
+                               Height="14"
+                               Stretch="Uniform"
+                               Margin="2"
+                               Source="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Tag, Converter={StaticResource IconFileToImageSourceConverter}}" />
+                    </Button>
+                    <Button Command="{Binding AddAudioTrackCommand}"
+                            Tag="audio.svg"
+                            ToolTip="Add audio track"
+                            Width="36"
+                            Height="36"
+                            Margin="0"
+                            Padding="0"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center">
+                        <Image Width="14"
+                               Height="14"
+                               Stretch="Uniform"
+                               Margin="2"
+                               Source="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Tag, Converter={StaticResource IconFileToImageSourceConverter}}" />
+                    </Button>
                 </StackPanel>
-            </DockPanel>
+            </Grid>
 
             <Border Grid.Row="1"
-                    Background="#171B22"
-                    BorderBrush="{StaticResource BorderBrushDark}"
+                    x:Name="TimelineRulerPanel"
+                    Background="#101827"
+                    BorderBrush="#2A3A55"
                     BorderThickness="1"
-                    CornerRadius="4"
-                    Margin="0,0,0,8">
+                    CornerRadius="10"
+                    Margin="0,0,0,8"
+                    PreviewMouseLeftButtonDown="TimelineRulerPanel_PreviewMouseLeftButtonDown"
+                    PreviewMouseLeftButtonUp="TimelineRulerPanel_PreviewMouseLeftButtonUp"
+                    PreviewMouseMove="TimelineRulerPanel_PreviewMouseMove">
                 <Grid Height="38">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="118" />
@@ -51,8 +138,8 @@
                     </Grid.ColumnDefinitions>
 
                     <Border Grid.Column="0"
-                            Background="#161A20"
-                            BorderBrush="{StaticResource BorderBrushDark}"
+                            Background="#0D1420"
+                            BorderBrush="#2A3A55"
                             BorderThickness="0,0,1,0">
                         <TextBlock Text="Time"
                                    VerticalAlignment="Center"
@@ -63,10 +150,7 @@
                     <Grid Grid.Column="1"
                           x:Name="TimelineRuler"
                           ClipToBounds="True"
-                          Cursor="Hand"
-                          PreviewMouseLeftButtonDown="TimelineRuler_PreviewMouseLeftButtonDown"
-                          PreviewMouseLeftButtonUp="TimelineRuler_PreviewMouseLeftButtonUp"
-                          PreviewMouseMove="TimelineRuler_PreviewMouseMove">
+                          Cursor="Hand">
                         <Canvas>
                             <Canvas Width="{Binding TimelineCanvasWidth}">
                                 <Canvas.RenderTransform>
@@ -118,15 +202,15 @@
                           x:Name="TimelineVerticalScrollViewer"
                           HorizontalScrollBarVisibility="Disabled"
                           VerticalScrollBarVisibility="Auto"
-                          Background="#151920">
-                <Grid Background="#151920">
+                          Background="#0B111C">
+                <Grid Background="#0B111C">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="118" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0">
-                        <Border Background="#151920" Padding="0,0,0,10">
+                        <Border Background="#0B111C" Padding="0,0,0,10">
                             <StackPanel>
                                 <TextBlock Text="VIDEO TRACKS"
                                            Foreground="{StaticResource TextMutedBrush}"
@@ -139,8 +223,8 @@
                                         <DataTemplate>
                                             <Border Height="58"
                                                     Margin="0,0,0,6"
-                                                    Background="#171C24"
-                                                    BorderBrush="{StaticResource BorderBrushDark}"
+                                                    Background="#111B2A"
+                                                    BorderBrush="#263A57"
                                                     BorderThickness="1"
                                                     CornerRadius="4,0,0,4">
                                                 <Grid VerticalAlignment="Center" Margin="12,0">
@@ -156,12 +240,16 @@
                                                                    TextTrimming="CharacterEllipsis" />
                                                     </StackPanel>
                                                     <Button Grid.Column="1"
-                                                            Content="{Binding ToggleTrackEnabledLabel}"
+                                                            Width="30"
+                                                            Height="30"
                                                             Command="{Binding ToggleTrackEnabledCommand}"
-                                                            Width="48"
-                                                            Height="24"
-                                                            FontSize="10"
-                                                            Margin="6,0,0,0" />
+                                                            Margin="6,0,0,0"
+                                                            Padding="0"
+                                                            ToolTip="{Binding ToggleTrackEnabledLabel}">
+                                                        <Image Width="14"
+                                                               Height="14"
+                                                               Source="{Binding ToggleTrackEnabledIconName, Converter={StaticResource IconFileToImageSourceConverter}}" />
+                                                    </Button>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
@@ -170,7 +258,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Background="#151920">
+                        <Border Background="#0B111C">
                             <StackPanel>
                                 <TextBlock Text="AUDIO TRACKS"
                                            Foreground="{StaticResource TextMutedBrush}"
@@ -183,8 +271,8 @@
                                         <DataTemplate>
                                             <Border Height="58"
                                                     Margin="0,0,0,6"
-                                                    Background="#171C24"
-                                                    BorderBrush="{StaticResource BorderBrushDark}"
+                                                    Background="#111B2A"
+                                                    BorderBrush="#263A57"
                                                     BorderThickness="1"
                                                     CornerRadius="4,0,0,4">
                                                 <Grid VerticalAlignment="Center" Margin="12,0">
@@ -200,12 +288,16 @@
                                                                    TextTrimming="CharacterEllipsis" />
                                                     </StackPanel>
                                                     <Button Grid.Column="1"
-                                                            Content="{Binding ToggleTrackEnabledLabel}"
+                                                            Width="30"
+                                                            Height="30"
                                                             Command="{Binding ToggleTrackEnabledCommand}"
-                                                            Width="48"
-                                                            Height="24"
-                                                            FontSize="10"
-                                                            Margin="6,0,0,0" />
+                                                            Margin="6,0,0,0"
+                                                            Padding="0"
+                                                            ToolTip="{Binding ToggleTrackEnabledLabel}">
+                                                        <Image Width="14"
+                                                               Height="14"
+                                                               Source="{Binding ToggleTrackEnabledIconName, Converter={StaticResource IconFileToImageSourceConverter}}" />
+                                                    </Button>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
@@ -217,13 +309,13 @@
 
                 <ScrollViewer Grid.Column="1"
                               x:Name="TimelineScrollViewer"
-                              HorizontalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Hidden"
                               VerticalScrollBarVisibility="Disabled"
                               ScrollChanged="TimelineScrollViewer_ScrollChanged"
                               PreviewMouseWheel="TimelineScrollViewer_PreviewMouseWheel"
-                              Background="#151920">
+                              Background="#0B111C">
                     <StackPanel MinWidth="{Binding TimelineCanvasWidth}">
-                        <Border Background="#151920" Padding="0,0,0,10">
+                        <Border Background="#0B111C" Padding="0,0,0,10">
                             <StackPanel>
                                 <TextBlock Text="VIDEO TRACKS"
                                            Foreground="Transparent"
@@ -238,8 +330,8 @@
                                             <Border Height="58"
                                                     Margin="0,0,0,6"
                                                     Opacity="{Binding TrackOpacity}"
-                                                    Background="#10151C"
-                                                    BorderBrush="{StaticResource BorderBrushDark}"
+                                                    Background="#09111D"
+                                                    BorderBrush="#1F3048"
                                                     BorderThickness="0,1,1,1"
                                                     CornerRadius="0,4,4,0"
                                                     AllowDrop="True"
@@ -317,8 +409,8 @@
                                             <Border Height="58"
                                                     Margin="0,0,0,6"
                                                     Opacity="{Binding TrackOpacity}"
-                                                    Background="#10151C"
-                                                    BorderBrush="{StaticResource BorderBrushDark}"
+                                                    Background="#09111D"
+                                                    BorderBrush="#1F3048"
                                                     BorderThickness="0,1,1,1"
                                                     CornerRadius="0,4,4,0"
                                                     AllowDrop="True"
@@ -384,7 +476,32 @@
                 </ScrollViewer>
                 </Grid>
             </ScrollViewer>
+
+            <Border Grid.Row="3"
+                    Margin="118,4,0,0"
+                    Background="#091019"
+                    BorderBrush="#1A2940"
+                    BorderThickness="1"
+                    CornerRadius="7"
+                    Padding="4,2,4,2">
+                <Border.Resources>
+                    <Style TargetType="ScrollBar" BasedOn="{StaticResource {x:Type ScrollBar}}">
+                        <Setter Property="Height" Value="10" />
+                        <Setter Property="Background" Value="#091019" />
+                    </Style>
+                </Border.Resources>
+                <ScrollBar x:Name="TimelineHorizontalScrollBar"
+                           Orientation="Horizontal"
+                           Height="10"
+                           Minimum="0"
+                           Maximum="0"
+                           ValueChanged="TimelineHorizontalScrollBar_ValueChanged" />
+            </Border>
         </Grid>
     </Border>
 </UserControl>
+
+
+
+
 

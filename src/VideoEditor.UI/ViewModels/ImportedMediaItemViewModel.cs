@@ -1,4 +1,5 @@
 ﻿using VideoEditor.Domain.Entities;
+using VideoEditor.Domain.Enums;
 
 namespace VideoEditor.UI.ViewModels;
 
@@ -18,6 +19,10 @@ public sealed class ImportedMediaItemViewModel
     public string DisplayName => Asset.DisplayName;
 
     public string TypeLabel => Asset.Type.ToString();
+
+    public bool IsAudio => Asset.Type == MediaType.Audio;
+
+    public string? TypeIconFileName => IsAudio ? "sound.svg" : null;
 
     public string? ThumbnailPath { get; }
 
