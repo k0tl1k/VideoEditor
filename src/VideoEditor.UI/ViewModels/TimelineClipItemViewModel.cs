@@ -20,4 +20,10 @@ public sealed class TimelineClipItemViewModel
     public required double Left { get; init; }
 
     public required string AccentColor { get; init; }
+
+    public required bool IsSelected { get; init; }
+
+    public string BorderColor => IsSelected ? "#F6D365" : AccentColor;
+
+    public string BorderThickness => IsSelected ? "3" : "1";
 }

@@ -122,8 +122,23 @@ public partial class TimelinePanel : UserControl
         viewModel.MoveClip(clip.ClipId, track.TrackName, targetLeft);
     }
 
+    private void TrackLane_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if ((e.OriginalSource as FrameworkElement)?.DataContext is TimelineClipItemViewModel)
+            return;
+
+        if (DataContext is MainWindowViewModel viewModel)
+            viewModel.ClearTimelineSelection();
+    }
+
     private void TimelineScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
         RulerMarksTransform.X = -e.HorizontalOffset;
+    }
+
+    private void TimelineScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        TimelineVerticalScrollViewer.ScrollToVerticalOffset(TimelineVerticalScrollViewer.VerticalOffset - e.Delta);
+        e.Handled = true;
     }
 }
