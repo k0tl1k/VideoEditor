@@ -13,16 +13,43 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <DockPanel Grid.Row="0" Margin="0,0,0,8">
-                <TextBlock Text="Program Monitor" Style="{StaticResource TitleTextStyle}" Margin="0" />
+            <Grid Grid.Row="0" Margin="0,0,0,10" VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="26"
+                            Height="26"
+                            CornerRadius="8"
+                            Background="#1D324A"
+                            Margin="0,0,8,0">
+                        <Image Width="14"
+                               Height="14"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Tag="video.svg"
+                               Source="{Binding RelativeSource={RelativeSource Self}, Path=Tag, Converter={StaticResource IconFileToImageSourceConverter}}" />
+                    </Border>
+                    <TextBlock Text="Program Monitor"
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               FontSize="14"
+                               FontWeight="Bold"
+                               Margin="0,0,0,0" />
+                </StackPanel>
                 <TextBlock Text="{Binding PreviewTitle}"
                            Foreground="{StaticResource TextMutedBrush}"
                            VerticalAlignment="Center"
                            HorizontalAlignment="Right"
-                           DockPanel.Dock="Right" />
-            </DockPanel>
+                           Grid.Column="1" />
+            </Grid>
 
-            <Border Grid.Row="1" Background="#0F1217" BorderBrush="{StaticResource BorderBrushDark}" BorderThickness="1" CornerRadius="4" Padding="6">
+            <Border Grid.Row="1" Background="#05070B" BorderBrush="#2A3952" BorderThickness="1" CornerRadius="14" Padding="8">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" ShadowDepth="0" Color="#AA000000" Opacity="0.65" />
+                </Border.Effect>
                 <Grid>
                     <Viewbox Stretch="Uniform">
                         <Canvas Width="1920" Height="1080" Background="#000000" ClipToBounds="True">
@@ -99,9 +126,11 @@
                                   MediaFailed="PreviewAudioElement_MediaFailed"
                                   Visibility="Collapsed" />
 
-                    <Border Background="#AA0F1217"
-                            CornerRadius="4"
-                            Padding="8,4"
+                    <Border Background="#CC08101B"
+                            BorderBrush="#33496A"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Padding="10,6"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Bottom"
                             Margin="8">
@@ -112,12 +141,36 @@
                 </Grid>
             </Border>
 
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
                 <Button Content="|&lt;" Width="44" Command="{Binding StopPreviewCommand}" />
-                <Button Content="Pause" Width="64" Command="{Binding PausePreviewCommand}" />
-                <Button Content="Play" Width="72" Command="{Binding PlayPreviewCommand}" />
-                <Button Content="Stop" Width="64" Command="{Binding StopPreviewCommand}" Margin="0" />
+                <Button Width="64"
+                        ToolTip="Pause"
+                        Tag="pause.svg"
+                        Command="{Binding PausePreviewCommand}">
+                    <Image Width="14"
+                           Height="14"
+                           Source="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Tag, Converter={StaticResource IconFileToImageSourceConverter}}" />
+                </Button>
+                <Button Width="72"
+                        ToolTip="Play"
+                        Tag="play.svg"
+                        Command="{Binding PlayPreviewCommand}">
+                    <Image Width="14"
+                           Height="14"
+                           Source="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Tag, Converter={StaticResource IconFileToImageSourceConverter}}" />
+                </Button>
+                <Button Width="64"
+                        ToolTip="Stop"
+                        Tag="stop.svg"
+                        Command="{Binding StopPreviewCommand}"
+                        Margin="0">
+                    <Image Width="14"
+                           Height="14"
+                           Source="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Tag, Converter={StaticResource IconFileToImageSourceConverter}}" />
+                </Button>
             </StackPanel>
         </Grid>
     </Border>
 </UserControl>
+
+

@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using System.Windows.Data;
 using Microsoft.Win32;
 using VideoEditor.Application;
 using VideoEditor.Application.Abstractions;
@@ -40,6 +41,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly RelayCommand _zoomOutTimelineCommand;
 
     private ImportedMediaItemViewModel? _selectedImportedMedia;
+    private string _importedMediaSearchText = string.Empty;
     private Domain.Enums.MediaType? _previewMediaType;
     private Guid? _previewClipId;
     private bool _isTimelineGapPreview;
@@ -96,6 +98,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     /// 	Импортированные ассеты для отображения в панели проекта.
     /// </summary>
     public ObservableCollection<ImportedMediaItemViewModel> ImportedMedia { get; } = new();
+
+    /// <summary>
+    /// 	Отфильтрованный view импортированных медиа.
+    /// </summary>
+    public ICollectionView ImportedMediaView { get; }
 
     /// <summary>
     /// 	Выбранный импортированный ассет.
@@ -204,7 +211,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     /// <summary>
     /// 	Ширина холста таймлайна.
     /// </summary>
-    public double TimelineCanvasWidth => TimelineVisibleSeconds * CurrentTimelinePixelsPerSecond + TimelinePlayheadLeft;
+    public double TimelineCanvasWidth => ResolveTimelineCanvasDuration().TotalSeconds * CurrentTimelinePixelsPerSecond + TimelinePlayheadLeft;
 
     public TimeSpan TimelinePlaybackPosition
     {
@@ -859,6 +866,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _zoomInTimelineCommand = new RelayCommand(ZoomInTimeline, CanZoomInTimeline);
         _zoomOutTimelineCommand = new RelayCommand(ZoomOutTimeline, CanZoomOutTimeline);
 
+        ImportedMediaView = CollectionViewSource.GetDefaultView(ImportedMedia);
+        ImportedMediaView.Filter = FilterImportedMedia;
+
         ImportMediaCommand = new RelayCommand(ImportMedia);
         BrowseExportOutputPathCommand = _browseExportOutputPathCommand;
         ExportProjectCommand = _exportProjectCommand;
@@ -887,7 +897,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         if (dialog.ShowDialog() != true)
             return;
 
-        var imported = _mediaImportService.Import(dialog.FileNames);
+        ImportMediaFiles(dialog.FileNames);
+    }
+
+    /// <summary>
+    /// 	Импортирует медиафайлы из указанных путей.
+    /// </summary>
+    /// <param name="filePaths">Пути к файлам для импорта.</param>
+    public void ImportMediaFiles(IEnumerable<string> filePaths)
+    {
+        var imported = _mediaImportService.Import(filePaths);
 
         foreach (var asset in imported)
         {
@@ -915,13 +934,102 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             CurrentProject.MediaAssets.Add(asset);
             var thumbnailPath = _mediaThumbnailService.GetThumbnailPath(asset);
             ImportedMedia.Add(new ImportedMediaItemViewModel(asset, thumbnailPath));
+            ImportedMediaView.Refresh();
+        }
+    }
+
+    /// <summary>
+    /// 	Текст поиска по проекту.
+    /// </summary>
+    public string ImportedMediaSearchText
+    {
+        get => _importedMediaSearchText;
+        set
+        {
+            if (_importedMediaSearchText == value)
+                return;
+
+            _importedMediaSearchText = value;
+            ImportedMediaView.Refresh();
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// 	Удаляет импортированный медиа-ассет и все связанные с ним клипы.
+    /// </summary>
+    /// <param name="assetId">Идентификатор медиа-ассета.</param>
+    public void RemoveImportedMedia(Guid assetId)
+    {
+        var asset = CurrentProject.MediaAssets.FirstOrDefault(x => x.Id == assetId);
+        if (asset is null)
+            return;
+
+        var relatedClipIds = CurrentProject.Tracks
+            .SelectMany(track => track.Clips)
+            .Where(clip => clip.MediaAssetId == assetId)
+            .Select(clip => clip.Id)
+            .ToHashSet();
+
+        foreach (var track in CurrentProject.Tracks)
+        {
+            var clipsToRemove = track.Clips
+                .Where(clip => clip.MediaAssetId == assetId)
+                .ToList();
+
+            foreach (var clip in clipsToRemove)
+                track.Clips.Remove(clip);
         }
 
+        CurrentProject.MediaAssets.Remove(asset);
+
+        var importedItem = ImportedMedia.FirstOrDefault(x => x.Asset.Id == assetId);
+        if (importedItem is not null)
+            ImportedMedia.Remove(importedItem);
+        ImportedMediaView.Refresh();
+
+        if (SelectedImportedMedia?.Asset.Id == assetId)
+            SelectedImportedMedia = null;
+
+        if ((_previewClipId is not null && relatedClipIds.Contains(_previewClipId.Value)) ||
+            (_selectedVisualClip is not null && relatedClipIds.Contains(_selectedVisualClip.Id)) ||
+            (_selectedAudioClip is not null && relatedClipIds.Contains(_selectedAudioClip.Id)))
+        {
+            ClearPreviewAfterDeletedClip();
+        }
+
+        RefreshTimelinePresentation();
+    }
+
+    /// <summary>
+    /// 	Считает количество клипов на таймлайне, связанных с медиа-ассетом.
+    /// </summary>
+    /// <param name="assetId">Идентификатор медиа-ассета.</param>
+    /// <returns>Количество связанных клипов.</returns>
+    public int GetImportedMediaUsageCount(Guid assetId)
+    {
+        return CurrentProject.Tracks
+            .SelectMany(track => track.Clips)
+            .Count(clip => clip.MediaAssetId == assetId);
     }
 
     private bool CanInsertSelectedMediaToTimeline()
     {
         return SelectedImportedMedia is not null;
+    }
+
+    private bool FilterImportedMedia(object item)
+    {
+        if (item is not ImportedMediaItemViewModel media)
+            return false;
+
+        if (string.IsNullOrWhiteSpace(ImportedMediaSearchText))
+            return true;
+
+        var query = ImportedMediaSearchText.Trim();
+        return media.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               media.TypeLabel.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+               media.Asset.FilePath.Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 
     private bool CanExportProject()
@@ -1055,40 +1163,56 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         if (asset is null)
             return;
 
+        InsertMediaToTimeline(asset, ResolveAppendStartForAsset(asset));
+    }
+
+    public void InsertMediaToTimeline(MediaAsset asset, double targetLeft)
+    {
+        var timelineStart = TimeSpan.FromSeconds(Math.Max(0, targetLeft / CurrentTimelinePixelsPerSecond));
+        InsertMediaToTimeline(asset, timelineStart);
+    }
+
+    private TimelineClip InsertMediaToTimeline(MediaAsset asset, TimeSpan timelineStart)
+    {
+        TimelineClip insertedClip;
+
         if (asset.Type == Domain.Enums.MediaType.Audio)
         {
             var audioTrack = EnsureTrack("Audio");
-            var clip = AddClipToTrack(audioTrack, asset, ResolveAppendStart(audioTrack), ResolveClipDuration(asset));
-            RefreshTimelinePresentation();
-            SelectClipForPreviewIfNone(clip.Id);
-            return;
+            insertedClip = AddClipToTrack(audioTrack, asset, timelineStart, ResolveClipDuration(asset));
         }
-
-        if (asset.Type == Domain.Enums.MediaType.Image)
+        else if (asset.Type == Domain.Enums.MediaType.Image)
         {
             var videoTrack = EnsureTrack("Video");
-            var clip = AddClipToTrack(videoTrack, asset, ResolveAppendStart(videoTrack), ResolveClipDuration(asset));
-            RefreshTimelinePresentation();
-            SelectClipForPreviewIfNone(clip.Id);
-            return;
+            insertedClip = AddClipToTrack(videoTrack, asset, timelineStart, ResolveClipDuration(asset));
+        }
+        else
+        {
+            insertedClip = InsertVideoWithAudio(asset, timelineStart);
         }
 
-        var videoClip = InsertVideoWithAudio(asset);
         RefreshTimelinePresentation();
-        SelectClipForPreviewIfNone(videoClip.Id);
+        SelectClipForPreviewIfNone(insertedClip.Id);
+        return insertedClip;
     }
 
-    private TimelineClip InsertVideoWithAudio(MediaAsset asset)
+    private TimelineClip InsertVideoWithAudio(MediaAsset asset, TimeSpan timelineStart)
     {
         var videoTrack = EnsureTrack("Video");
         var audioTrack = EnsureTrack("Audio");
         var duration = ResolveClipDuration(asset);
-        var timelineStart = ResolveAppendStart(videoTrack);
         var linkedGroupId = Guid.NewGuid();
 
         var videoClip = AddClipToTrack(videoTrack, asset, timelineStart, duration, linkedGroupId);
         AddClipToTrack(audioTrack, asset, timelineStart, duration, linkedGroupId);
         return videoClip;
+    }
+
+    private TimeSpan ResolveAppendStartForAsset(MediaAsset asset)
+    {
+        return asset.Type == Domain.Enums.MediaType.Audio
+            ? ResolveAppendStart(EnsureTrack("Audio"))
+            : ResolveAppendStart(EnsureTrack("Video"));
     }
 
     private TimelineClip AddClipToTrack(
@@ -2371,6 +2495,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     }
 
     private double CurrentTimelinePixelsPerSecond => TimelineZoomLevels[_timelineZoomIndex];
+
+    private TimeSpan ResolveTimelineCanvasDuration()
+    {
+        var projectEnd = CurrentProject.Tracks
+            .SelectMany(track => track.Clips)
+            .Select(clip => clip.TimelineEnd)
+            .DefaultIfEmpty(TimeSpan.Zero)
+            .Max();
+
+        var minimumDuration = TimeSpan.FromSeconds(TimelineVisibleSeconds);
+        return projectEnd > minimumDuration ? projectEnd : minimumDuration;
+    }
 
     private void RefreshTimelinePresentation()
     {

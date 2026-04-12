@@ -1,4 +1,7 @@
+﻿using System.Globalization;
 using System.Windows;
+using System.Windows.Media;
+using VideoEditor.UI.Converters;
 using VideoEditor.UI.ViewModels;
 
 namespace VideoEditor.UI;
@@ -15,5 +18,12 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = viewModel;
+        Icon = LoadWindowIcon();
+    }
+
+    private static ImageSource? LoadWindowIcon()
+    {
+        var converter = new IconFileToImageSourceConverter();
+        return converter.Convert("app-logo.svg", typeof(ImageSource), string.Empty, CultureInfo.InvariantCulture) as ImageSource;
     }
 }

@@ -6,14 +6,14 @@
         xmlns:controls="clr-namespace:VideoEditor.UI.Controls"
         mc:Ignorable="d"
         Title="VideoEditor"
-        Background="{StaticResource BgBrush}"
+        Background="{StaticResource AppBackgroundBrush}"
         Foreground="{StaticResource TextPrimaryBrush}"
         MinHeight="720"
         MinWidth="1200"
         Height="840"
         Width="1440"
         WindowStartupLocation="CenterScreen">
-    <Grid x:Name="RootGrid" Background="{StaticResource BgBrush}">
+    <Grid x:Name="RootGrid" Background="{StaticResource AppBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -23,27 +23,45 @@
 
         <controls:TopBar Grid.Row="0" />
 
-        <Grid Grid.Row="1" Margin="10,10,10,8">
+        <Grid Grid.Row="1" Margin="14,14,14,10">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="280" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="300" />
+                <ColumnDefinition Width="2*" MinWidth="280" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="5*" MinWidth="360" />
+                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="3*" MinWidth="280" />
             </Grid.ColumnDefinitions>
 
-            <controls:ProjectPanel Grid.Column="0" Margin="0,0,8,0" />
-            <controls:ProgramMonitor Grid.Column="1" Margin="0,0,8,0" />
-            <controls:InspectorPanel Grid.Column="2" />
+            <controls:ProjectPanel Grid.Column="0" Margin="0,0,6,0" />
+            <GridSplitter Grid.Column="1"
+                          Width="8"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          ResizeDirection="Columns"
+                          ResizeBehavior="PreviousAndNext"
+                          ShowsPreview="True" />
+
+            <controls:ProgramMonitor Grid.Column="2" Margin="6,0,6,0" />
+
+            <GridSplitter Grid.Column="3"
+                          Width="8"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          ResizeDirection="Columns"
+                          ResizeBehavior="PreviousAndNext"
+                          ShowsPreview="True" />
+
+            <controls:InspectorPanel Grid.Column="4" Margin="6,0,0,0" />
         </Grid>
 
         <GridSplitter Grid.Row="2"
-                      Height="6"
+                      Height="8"
                       HorizontalAlignment="Stretch"
                       VerticalAlignment="Center"
                       ResizeDirection="Rows"
                       ResizeBehavior="PreviousAndNext"
-                      Background="#232934"
                       ShowsPreview="True" />
 
-        <controls:TimelinePanel Grid.Row="3" Margin="10,0,10,10" />
+        <controls:TimelinePanel Grid.Row="3" Margin="14,0,14,14" />
     </Grid>
 </Window>

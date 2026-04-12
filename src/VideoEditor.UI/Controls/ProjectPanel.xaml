@@ -21,58 +21,219 @@
         </Style>
     </UserControl.Resources>
 
-    <Border Style="{StaticResource PanelBorderStyle}">
+    <Border Style="{StaticResource PanelBorderStyle}"
+            AllowDrop="True"
+            DragEnter="ProjectPanel_DragEnter"
+            DragOver="ProjectPanel_DragOver"
+            Drop="ProjectPanel_Drop">
+        <Border.ContextMenu>
+            <ContextMenu>
+                <MenuItem Header="Import media..."
+                          Click="ImportMediaMenuItem_Click" />
+            </ContextMenu>
+        </Border.ContextMenu>
         <DockPanel>
-            <TextBlock Text="Project" Style="{StaticResource TitleTextStyle}" DockPanel.Dock="Top" />
+            <Grid DockPanel.Dock="Top" Margin="0,0,0,10" VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Width="26"
+                        Height="26"
+                        CornerRadius="8"
+                        Background="#213B56"
+                        Margin="0,0,8,0">
+                    <Image Width="14"
+                           Height="14"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Tag="folder.svg"
+                           Source="{Binding RelativeSource={RelativeSource Self}, Path=Tag, Converter={StaticResource IconFileToImageSourceConverter}}" />
+                </Border>
+                <TextBlock Grid.Column="1"
+                           Text="Project"
+                           VerticalAlignment="Center"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           FontSize="14"
+                           FontWeight="Bold"
+                           Margin="0,0,0,0" />
+            </Grid>
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <TextBox Grid.Row="0"
-                         Margin="0,0,0,10"
-                         IsReadOnly="True"
-                         Background="{StaticResource BgElevatedBrush}"
-                         BorderBrush="{StaticResource BorderBrushDark}"
-                         Foreground="{StaticResource TextMutedBrush}"
-                         Padding="8,4"
-                         Text="Imported media" />
+                <Border Grid.Row="0"
+                        Background="#0D1420"
+                        BorderBrush="#263A57"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Padding="10,8"
+                        Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Image Width="14"
+                               Height="14"
+                               Margin="0,0,8,0"
+                               VerticalAlignment="Center"
+                               Tag="search.svg"
+                               Source="{Binding RelativeSource={RelativeSource Self}, Path=Tag, Converter={StaticResource IconFileToImageSourceConverter}}" />
+                        <TextBlock Grid.Column="1"
+                                   Text="Search"
+                                   VerticalAlignment="Center"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Margin="0,0,10,0" />
+                        <TextBox Grid.Column="2"
+                                 Text="{Binding ImportedMediaSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 MinHeight="28"
+                                 VerticalContentAlignment="Center" />
+                    </Grid>
+                </Border>
 
-                <DockPanel Grid.Row="1" Margin="0,0,0,10" LastChildFill="False">
-                    <Button Content="Insert To Timeline"
-                            Command="{Binding InsertSelectedMediaToTimelineCommand}"
-                            Margin="0" />
-                </DockPanel>
-
-                <ListBox Grid.Row="2"
-                         ItemsSource="{Binding ImportedMedia}"
+                <ListBox Grid.Row="1"
+                         ItemsSource="{Binding ImportedMediaView}"
                          SelectedItem="{Binding SelectedImportedMedia}"
-                         Background="{StaticResource BgElevatedBrush}"
-                         BorderBrush="{StaticResource BorderBrushDark}"
-                         Foreground="{StaticResource TextPrimaryBrush}">
+                         Foreground="{StaticResource TextPrimaryBrush}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         Background="#00000000"
+                         BorderThickness="0"
+                         HorizontalContentAlignment="Stretch">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel IsItemsHost="True" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                            <Setter Property="Width" Value="126" />
+                            <Setter Property="Height" Value="156" />
+                            <Setter Property="Margin" Value="0,0,10,10" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Grid Margin="0,4,0,4">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="64" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
+                            <Border Background="#0B111C"
+                                    BorderBrush="#263A57"
+                                    BorderThickness="1"
+                                    CornerRadius="14"
+                                    SnapsToDevicePixels="True"
+                                    Cursor="Hand"
+                                    PreviewMouseLeftButtonDown="MediaCard_PreviewMouseLeftButtonDown"
+                                    PreviewMouseMove="MediaCard_PreviewMouseMove">
+                                <Border.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Delete media"
+                                                  Click="DeleteMediaMenuItem_Click" />
+                                    </ContextMenu>
+                                </Border.ContextMenu>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="22" />
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="32" />
+                                        </Grid.RowDefinitions>
 
-                                <Grid Width="56" Height="40" Margin="0,0,8,0">
-                                    <Border Background="#11151C" BorderBrush="{StaticResource BorderBrushDark}" BorderThickness="1" CornerRadius="3" />
-                                    <Image Source="{Binding ThumbnailPath}" Stretch="UniformToFill" Style="{StaticResource ThumbnailImageStyle}" ClipToBounds="True" />
-                                    <Border Style="{StaticResource ThumbnailPlaceholderStyle}" Background="#11151C" BorderBrush="{StaticResource BorderBrushDark}" BorderThickness="1" CornerRadius="3">
-                                        <TextBlock Text="{Binding TypeLabel}" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource TextMutedBrush}" />
+                                    <Border Grid.Row="0"
+                                            Margin="6,6,6,0"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Top"
+                                            CornerRadius="6"
+                                            Padding="6,1"
+                                            Background="#152036"
+                                            BorderBrush="#2F4A6F"
+                                            BorderThickness="1">
+                                        <TextBlock Text="{Binding TypeLabel}"
+                                                   FontSize="10"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource AccentBrush}" />
+                                    </Border>
+
+                                    <Grid Grid.Row="1" Margin="6,4,6,4">
+                                        <Border Background="#080D16"
+                                                BorderBrush="#304057"
+                                                BorderThickness="1"
+                                                CornerRadius="10" />
+                                        <Image Source="{Binding ThumbnailPath}"
+                                               Stretch="UniformToFill"
+                                               Style="{StaticResource ThumbnailImageStyle}"
+                                               ClipToBounds="True"
+                                               Margin="1" />
+                                        <Border Style="{StaticResource ThumbnailPlaceholderStyle}"
+                                                Background="#080D16"
+                                                BorderBrush="#304057"
+                                                BorderThickness="1"
+                                                CornerRadius="10">
+                                            <Grid>
+                                                <TextBlock Text="{Binding TypeLabel}"
+                                                           FontSize="13"
+                                                           FontWeight="Bold"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="{StaticResource TextMutedBrush}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsAudio}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+
+                                                <StackPanel HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center">
+                                                    <StackPanel.Style>
+                                                        <Style TargetType="StackPanel">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsAudio}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </StackPanel.Style>
+                                                    <Image Width="32"
+                                                           Height="32"
+                                                           Source="{Binding TypeIconFileName, Converter={StaticResource IconFileToImageSourceConverter}}"
+                                                           Margin="0,0,0,6" />
+                                                    <TextBlock Text="{Binding TypeLabel}"
+                                                               FontSize="13"
+                                                               FontWeight="Bold"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="{StaticResource TextMutedBrush}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+
+                                    <Border Grid.Row="2"
+                                            Margin="6,0,6,6"
+                                            Background="#0D1420"
+                                            BorderBrush="#22344E"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="7,3">
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding DisplayName}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       FontSize="10.5"
+                                                       FontWeight="SemiBold" />
+                                        </StackPanel>
                                     </Border>
                                 </Grid>
-
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="{Binding TypeLabel}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" />
-                                </StackPanel>
-                            </Grid>
+                            </Border>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
@@ -80,3 +241,5 @@
         </DockPanel>
     </Border>
 </UserControl>
+
+

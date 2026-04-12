@@ -24,6 +24,10 @@ public sealed class TimelineTrackItemViewModel
         ? IsEnabled ? "Hide" : "Show"
         : IsEnabled ? "Mute" : "Sound";
 
+    public string ToggleTrackEnabledIconName => IsVideoTrack
+        ? IsEnabled ? "show.svg" : "hide.svg"
+        : IsEnabled ? "sound.svg" : "mute.svg";
+
     public string TrackStateLabel => IsVideoTrack
         ? IsEnabled ? "Visible" : "Hidden"
         : IsEnabled ? "Audible" : "Muted";
@@ -32,3 +36,4 @@ public sealed class TimelineTrackItemViewModel
 
     public ObservableCollection<TimelineClipItemViewModel> Clips { get; } = new();
 }
+
