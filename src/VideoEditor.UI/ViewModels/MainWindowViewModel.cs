@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Microsoft.Win32;
@@ -26,6 +27,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private readonly IMediaImportService _mediaImportService;
     private readonly IMediaThumbnailService _mediaThumbnailService;
+    private readonly ITimelineExportService _timelineExportService;
+    private readonly RelayCommand _browseExportOutputPathCommand;
+    private readonly RelayCommand _exportProjectCommand;
     private readonly RelayCommand _insertSelectedMediaToTimelineCommand;
     private readonly RelayCommand _playPreviewCommand;
     private readonly RelayCommand _pausePreviewCommand;
@@ -41,6 +45,22 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private bool _isTimelineGapPreview;
     private bool _isTimelinePlaybackActive;
     private bool _isPreviewVideoAudioMuted;
+    private bool _isExporting;
+    private double _exportProgressPercent;
+    private string _exportProgressText = "Export is idle.";
+    private int _exportFrameRate = 30;
+    private int _exportConstantRateFactor = 23;
+    private int _exportAudioBitrateKbps = 192;
+    private string _exportVideoCodec = "H.264";
+    private string _exportFileType = "MP4";
+    private string _exportPreset = "medium";
+    private string _exportOutputPath = string.Empty;
+    private string _exportResolutionPreset = "1920x1080";
+    private int _exportWidth = 1920;
+    private int _exportHeight = 1080;
+    private bool _useCustomExportRange;
+    private double _exportRangeStartSeconds;
+    private double _exportRangeEndSeconds;
     private TimeSpan _previewGapDuration;
     private Uri? _previewAudioSource;
     private TimeSpan _previewAudioSourceDuration;
@@ -132,6 +152,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     /// 	Команда импорта медиафайлов.
     /// </summary>
     public ICommand ImportMediaCommand { get; }
+
+    public ICommand BrowseExportOutputPathCommand { get; }
+
+    public ICommand ExportProjectCommand { get; }
 
     /// <summary>
     /// 	Команда вставки выбранного медиафайла на таймлайн.
@@ -447,6 +471,237 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public bool IsPreviewPlaceholderVisible => !HasPreviewMedia && !IsTimelineGapPreview;
 
+    public bool IsExporting
+    {
+        get => _isExporting;
+        private set
+        {
+            if (_isExporting == value)
+                return;
+
+            _isExporting = value;
+            OnPropertyChanged();
+            _exportProjectCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public double ExportProgressPercent
+    {
+        get => _exportProgressPercent;
+        private set
+        {
+            var clampedValue = Math.Clamp(value, 0, 100);
+            if (Math.Abs(_exportProgressPercent - clampedValue) < 0.01)
+                return;
+
+            _exportProgressPercent = clampedValue;
+            OnPropertyChanged();
+        }
+    }
+
+    public string ExportProgressText
+    {
+        get => _exportProgressText;
+        private set
+        {
+            if (_exportProgressText == value)
+                return;
+
+            _exportProgressText = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public int ExportFrameRate
+    {
+        get => _exportFrameRate;
+        set
+        {
+            var clampedValue = Math.Clamp(value, 24, 60);
+            if (_exportFrameRate == clampedValue)
+                return;
+
+            _exportFrameRate = clampedValue;
+            OnPropertyChanged();
+        }
+    }
+
+    public int ExportConstantRateFactor
+    {
+        get => _exportConstantRateFactor;
+        set
+        {
+            var clampedValue = Math.Clamp(value, 18, 30);
+            if (_exportConstantRateFactor == clampedValue)
+                return;
+
+            _exportConstantRateFactor = clampedValue;
+            OnPropertyChanged();
+        }
+    }
+
+    public int ExportAudioBitrateKbps
+    {
+        get => _exportAudioBitrateKbps;
+        set
+        {
+            var clampedValue = Math.Clamp(value, 96, 320);
+            if (_exportAudioBitrateKbps == clampedValue)
+                return;
+
+            _exportAudioBitrateKbps = clampedValue;
+            OnPropertyChanged();
+        }
+    }
+
+    public string ExportPreset
+    {
+        get => _exportPreset;
+        set
+        {
+            var normalizedValue = NormalizeExportPreset(value);
+            if (_exportPreset == normalizedValue)
+                return;
+
+            _exportPreset = normalizedValue;
+            OnPropertyChanged();
+        }
+    }
+
+    public string ExportVideoCodec
+    {
+        get => _exportVideoCodec;
+        set
+        {
+            var normalizedValue = NormalizeExportVideoCodec(value);
+            if (_exportVideoCodec == normalizedValue)
+                return;
+
+            _exportVideoCodec = normalizedValue;
+            OnPropertyChanged();
+        }
+    }
+
+    public string ExportFileType
+    {
+        get => _exportFileType;
+        set
+        {
+            var normalizedValue = NormalizeExportFileType(value);
+            if (_exportFileType == normalizedValue)
+                return;
+
+            _exportFileType = normalizedValue;
+            OnPropertyChanged();
+            UpdateExportOutputPathExtension();
+        }
+    }
+
+    public string ExportOutputPath
+    {
+        get => _exportOutputPath;
+        set
+        {
+            if (_exportOutputPath == value)
+                return;
+
+            _exportOutputPath = value;
+            OnPropertyChanged();
+            _exportProjectCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public string ExportResolutionPreset
+    {
+        get => _exportResolutionPreset;
+        set
+        {
+            var normalizedValue = NormalizeExportResolutionPreset(value);
+            if (_exportResolutionPreset == normalizedValue)
+                return;
+
+            _exportResolutionPreset = normalizedValue;
+            ApplyExportResolutionPreset(normalizedValue);
+            OnPropertyChanged();
+        }
+    }
+
+    public int ExportWidth
+    {
+        get => _exportWidth;
+        set
+        {
+            var clampedValue = Math.Clamp(value, 320, 7680);
+            if (_exportWidth == clampedValue)
+                return;
+
+            _exportWidth = clampedValue;
+            OnPropertyChanged();
+        }
+    }
+
+    public int ExportHeight
+    {
+        get => _exportHeight;
+        set
+        {
+            var clampedValue = Math.Clamp(value, 240, 4320);
+            if (_exportHeight == clampedValue)
+                return;
+
+            _exportHeight = clampedValue;
+            OnPropertyChanged();
+        }
+    }
+
+    public double ExportRangeStartSeconds
+    {
+        get => _exportRangeStartSeconds;
+        set
+        {
+            var clampedValue = Math.Max(0, value);
+            if (Math.Abs(_exportRangeStartSeconds - clampedValue) < 0.001)
+                return;
+
+            _exportRangeStartSeconds = clampedValue;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ExportRangeLabel));
+        }
+    }
+
+    public bool UseCustomExportRange
+    {
+        get => _useCustomExportRange;
+        set
+        {
+            if (_useCustomExportRange == value)
+                return;
+
+            _useCustomExportRange = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ExportRangeLabel));
+        }
+    }
+
+    public double ExportRangeEndSeconds
+    {
+        get => _exportRangeEndSeconds;
+        set
+        {
+            var clampedValue = Math.Max(0, value);
+            if (Math.Abs(_exportRangeEndSeconds - clampedValue) < 0.001)
+                return;
+
+            _exportRangeEndSeconds = clampedValue;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ExportRangeLabel));
+        }
+    }
+
+    public string ExportRangeLabel => UseCustomExportRange
+        ? $"Range: {FormatSecondsLabel(ExportRangeStartSeconds)} - {FormatSecondsLabel(ExportRangeEndSeconds)}"
+        : "Range: full timeline";
+
     public Uri? PreviewImageSource => IsPreviewImage ? PreviewMediaSource : null;
 
     public Uri? PreviewPlayableMediaSource => IsPreviewPlayableMedia ? PreviewMediaSource : null;
@@ -583,13 +838,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         IProjectBootstrapService projectBootstrapService,
         IProjectPathService projectPathService,
         IMediaImportService mediaImportService,
-        IMediaThumbnailService mediaThumbnailService)
+        IMediaThumbnailService mediaThumbnailService,
+        ITimelineExportService timelineExportService)
     {
         _mediaImportService = mediaImportService;
         _mediaThumbnailService = mediaThumbnailService;
+        _timelineExportService = timelineExportService;
 
         CurrentProject = projectBootstrapService.CreateDefaultProject("Diploma Project");
         ProjectDirectory = projectPathService.BuildProjectDirectory(CurrentProject.Name);
+        _exportOutputPath = Path.Combine(ProjectDirectory, "Exports", $"{CurrentProject.Name}.mp4");
+        _browseExportOutputPathCommand = new RelayCommand(BrowseExportOutputPath);
+        _exportProjectCommand = new RelayCommand(ExportProject, CanExportProject);
         _insertSelectedMediaToTimelineCommand = new RelayCommand(InsertSelectedMediaToTimeline, CanInsertSelectedMediaToTimeline);
         _playPreviewCommand = new RelayCommand(PlayPreview, CanPlayPreview);
         _pausePreviewCommand = new RelayCommand(PausePreview, CanControlPreview);
@@ -600,6 +860,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _zoomOutTimelineCommand = new RelayCommand(ZoomOutTimeline, CanZoomOutTimeline);
 
         ImportMediaCommand = new RelayCommand(ImportMedia);
+        BrowseExportOutputPathCommand = _browseExportOutputPathCommand;
+        ExportProjectCommand = _exportProjectCommand;
         InsertSelectedMediaToTimelineCommand = _insertSelectedMediaToTimelineCommand;
         PlayPreviewCommand = _playPreviewCommand;
         PausePreviewCommand = _pausePreviewCommand;
@@ -660,6 +922,131 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private bool CanInsertSelectedMediaToTimeline()
     {
         return SelectedImportedMedia is not null;
+    }
+
+    private bool CanExportProject()
+    {
+        return !IsExporting &&
+            !string.IsNullOrWhiteSpace(ExportOutputPath) &&
+            CurrentProject.Tracks
+                .Where(x => x.IsEnabled)
+                .SelectMany(x => x.Clips)
+                .Any();
+    }
+
+    private void BrowseExportOutputPath()
+    {
+        var extension = ResolveExportFileExtension();
+        var dialog = new SaveFileDialog
+        {
+            Filter = ResolveExportFileDialogFilter(),
+            FileName = string.IsNullOrWhiteSpace(ExportOutputPath)
+                ? $"{CurrentProject.Name}.{extension}"
+                : Path.GetFileName(ExportOutputPath),
+            InitialDirectory = ResolveInitialExportDirectory(),
+            AddExtension = true,
+            DefaultExt = $".{extension}",
+            OverwritePrompt = true
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        ExportOutputPath = dialog.FileName;
+    }
+
+    private async void ExportProject()
+    {
+        if (IsExporting)
+            return;
+
+        try
+        {
+            if (UseCustomExportRange && ExportRangeEndSeconds <= ExportRangeStartSeconds)
+            {
+                PreviewStatusText = "Export failed: end time must be greater than start time.";
+                return;
+            }
+
+            IsExporting = true;
+            ExportProgressPercent = 0;
+            ExportProgressText = "Export: 0%";
+            PreviewStatusText = "Export started...";
+            var outputDirectory = Path.GetDirectoryName(ExportOutputPath);
+            if (!string.IsNullOrWhiteSpace(outputDirectory))
+                Directory.CreateDirectory(outputDirectory);
+
+            var options = new TimelineExportOptions
+            {
+                Width = ExportWidth,
+                Height = ExportHeight,
+                FrameRate = ExportFrameRate,
+                RangeStart = UseCustomExportRange ? TimeSpan.FromSeconds(ExportRangeStartSeconds) : TimeSpan.Zero,
+                RangeEnd = UseCustomExportRange ? TimeSpan.FromSeconds(ExportRangeEndSeconds) : null,
+                ConstantRateFactor = ExportConstantRateFactor,
+                VideoCodec = ExportVideoCodec,
+                Preset = ExportPreset,
+                AudioBitrateKbps = ExportAudioBitrateKbps
+            };
+            var progress = new Progress<TimelineExportProgress>(UpdateExportProgress);
+            await _timelineExportService.ExportAsync(CurrentProject, ExportOutputPath, options, progress);
+            ExportProgressPercent = 100;
+            ExportProgressText = "Export: 100%";
+            PreviewStatusText = $"Export finished: {ExportOutputPath}";
+        }
+        catch (Exception ex)
+        {
+            ExportProgressText = "Export failed.";
+            PreviewStatusText = $"Export failed: {ex.Message}";
+        }
+        finally
+        {
+            IsExporting = false;
+        }
+    }
+
+    private string? ResolveInitialExportDirectory()
+    {
+        var outputDirectory = Path.GetDirectoryName(ExportOutputPath);
+        if (!string.IsNullOrWhiteSpace(outputDirectory) && Directory.Exists(outputDirectory))
+            return outputDirectory;
+
+        return Directory.Exists(ProjectDirectory) ? ProjectDirectory : null;
+    }
+
+    private void UpdateExportOutputPathExtension()
+    {
+        if (string.IsNullOrWhiteSpace(ExportOutputPath))
+            return;
+
+        ExportOutputPath = Path.ChangeExtension(ExportOutputPath, ResolveExportFileExtension());
+    }
+
+    private string ResolveExportFileExtension()
+    {
+        return ExportFileType switch
+        {
+            "MOV" => "mov",
+            "MKV" => "mkv",
+            _ => "mp4"
+        };
+    }
+
+    private string ResolveExportFileDialogFilter()
+    {
+        return ExportFileType switch
+        {
+            "MOV" => "QuickTime video (*.mov)|*.mov",
+            "MKV" => "Matroska video (*.mkv)|*.mkv",
+            _ => "MP4 video (*.mp4)|*.mp4"
+        };
+    }
+
+    private void UpdateExportProgress(TimelineExportProgress progress)
+    {
+        ExportProgressPercent = progress.Percent;
+        ExportProgressText = $"Export: {progress.Percent:0}% ({progress.RenderedDuration:mm\\:ss})";
+        PreviewStatusText = ExportProgressText;
     }
 
     private void InsertSelectedMediaToTimeline()
@@ -961,6 +1348,73 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         };
     }
 
+    private static string NormalizeExportPreset(string value)
+    {
+        var normalizedValue = value.Trim().ToLowerInvariant();
+        return normalizedValue is "ultrafast" or "superfast" or "veryfast" or "faster" or "fast" or "medium" or "slow"
+            ? normalizedValue
+            : "medium";
+    }
+
+    private static string NormalizeExportVideoCodec(string value)
+    {
+        var normalizedValue = value.Trim().ToUpperInvariant();
+        return normalizedValue switch
+        {
+            "H.265" or "HEVC" or "H265" => "H.265",
+            "MPEG-4" or "MPEG4" => "MPEG-4",
+            _ => "H.264"
+        };
+    }
+
+    private static string NormalizeExportFileType(string value)
+    {
+        var normalizedValue = value.Trim().ToUpperInvariant();
+        return normalizedValue is "MOV" or "MKV" ? normalizedValue : "MP4";
+    }
+
+    private void ApplyExportResolutionPreset(string preset)
+    {
+        switch (preset)
+        {
+            case "3840x2160":
+                ExportWidth = 3840;
+                ExportHeight = 2160;
+                break;
+            case "2560x1440":
+                ExportWidth = 2560;
+                ExportHeight = 1440;
+                break;
+            case "1280x720":
+                ExportWidth = 1280;
+                ExportHeight = 720;
+                break;
+            case "1080x1920":
+                ExportWidth = 1080;
+                ExportHeight = 1920;
+                break;
+            case "Custom":
+                break;
+            default:
+                ExportWidth = 1920;
+                ExportHeight = 1080;
+                break;
+        }
+    }
+
+    private static string NormalizeExportResolutionPreset(string value)
+    {
+        return value.Trim() switch
+        {
+            "3840x2160" => "3840x2160",
+            "2560x1440" => "2560x1440",
+            "1280x720" => "1280x720",
+            "1080x1920" => "1080x1920",
+            "Custom" => "Custom",
+            _ => "1920x1080"
+        };
+    }
+
     private int ResolveTimelineLabelStep()
     {
         if (CurrentTimelinePixelsPerSecond >= 240)
@@ -976,6 +1430,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         var time = TimeSpan.FromSeconds(second);
         return $"{time.Hours:D2}:{time.Minutes:D2}:{time.Seconds:D2}:{frame:D2}";
+    }
+
+    private static string FormatSecondsLabel(double seconds)
+    {
+        var time = TimeSpan.FromSeconds(Math.Max(0, seconds));
+        return time.Hours > 0
+            ? $"{time.Hours:D2}:{time.Minutes:D2}:{time.Seconds:D2}"
+            : $"{time.Minutes:D2}:{time.Seconds:D2}";
     }
 
     public void MoveClip(Guid clipId, string targetTrackName, double left)
@@ -1920,6 +2382,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _playPreviewCommand?.RaiseCanExecuteChanged();
         _pausePreviewCommand?.RaiseCanExecuteChanged();
         _stopPreviewCommand?.RaiseCanExecuteChanged();
+        _exportProjectCommand?.RaiseCanExecuteChanged();
         OnPropertyChanged(nameof(TimelineZoomMaxIndex));
     }
 
@@ -1940,6 +2403,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }
+
+
+
 
 
 
