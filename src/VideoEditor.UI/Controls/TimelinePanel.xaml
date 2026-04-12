@@ -115,51 +115,135 @@
             </Border>
 
             <ScrollViewer Grid.Row="2"
-                          x:Name="TimelineScrollViewer"
-                          HorizontalScrollBarVisibility="Auto"
+                          x:Name="TimelineVerticalScrollViewer"
+                          HorizontalScrollBarVisibility="Disabled"
                           VerticalScrollBarVisibility="Auto"
-                          ScrollChanged="TimelineScrollViewer_ScrollChanged"
                           Background="#151920">
-                <StackPanel MinWidth="{Binding TimelineCanvasWidth}">
-                    <Border Background="#151920" Padding="0,0,0,10">
-                        <StackPanel>
-                            <TextBlock Text="VIDEO TRACKS"
-                                       Foreground="{StaticResource TextMutedBrush}"
-                                       FontSize="11"
-                                       FontWeight="SemiBold"
-                                       Margin="0,0,0,8" />
+                <Grid Background="#151920">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="118" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-                            <ItemsControl ItemsSource="{Binding VideoTimelineTracks}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Margin="0,0,0,6">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="118" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <Border Background="#151920" Padding="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="VIDEO TRACKS"
+                                           Foreground="{StaticResource TextMutedBrush}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,8" />
 
-                                            <Border Grid.Column="0"
-                                                    Height="58"
+                                <ItemsControl ItemsSource="{Binding VideoTimelineTracks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Height="58"
+                                                    Margin="0,0,0,6"
                                                     Background="#171C24"
                                                     BorderBrush="{StaticResource BorderBrushDark}"
                                                     BorderThickness="1"
                                                     CornerRadius="4,0,0,4">
-                                                <StackPanel VerticalAlignment="Center" Margin="12,0">
-                                                    <TextBlock Text="{Binding Header}" FontWeight="Bold" />
-                                                    <TextBlock Text="{Binding Title}"
-                                                               Foreground="{StaticResource TextMutedBrush}"
-                                                               FontSize="11"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                </StackPanel>
+                                                <Grid VerticalAlignment="Center" Margin="12,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0">
+                                                        <TextBlock Text="{Binding Header}" FontWeight="Bold" />
+                                                        <TextBlock Text="{Binding Title}"
+                                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                                   FontSize="11"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                    <Button Grid.Column="1"
+                                                            Content="{Binding ToggleTrackEnabledLabel}"
+                                                            Command="{Binding ToggleTrackEnabledCommand}"
+                                                            Width="48"
+                                                            Height="24"
+                                                            FontSize="10"
+                                                            Margin="6,0,0,0" />
+                                                </Grid>
                                             </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
 
-                                            <Border Grid.Column="1"
-                                                    Height="58"
+                        <Border Background="#151920">
+                            <StackPanel>
+                                <TextBlock Text="AUDIO TRACKS"
+                                           Foreground="{StaticResource TextMutedBrush}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,8" />
+
+                                <ItemsControl ItemsSource="{Binding AudioTimelineTracks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Height="58"
+                                                    Margin="0,0,0,6"
+                                                    Background="#171C24"
+                                                    BorderBrush="{StaticResource BorderBrushDark}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4,0,0,4">
+                                                <Grid VerticalAlignment="Center" Margin="12,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0">
+                                                        <TextBlock Text="{Binding Header}" FontWeight="Bold" />
+                                                        <TextBlock Text="{Binding Title}"
+                                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                                   FontSize="11"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                    <Button Grid.Column="1"
+                                                            Content="{Binding ToggleTrackEnabledLabel}"
+                                                            Command="{Binding ToggleTrackEnabledCommand}"
+                                                            Width="48"
+                                                            Height="24"
+                                                            FontSize="10"
+                                                            Margin="6,0,0,0" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                <ScrollViewer Grid.Column="1"
+                              x:Name="TimelineScrollViewer"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled"
+                              ScrollChanged="TimelineScrollViewer_ScrollChanged"
+                              PreviewMouseWheel="TimelineScrollViewer_PreviewMouseWheel"
+                              Background="#151920">
+                    <StackPanel MinWidth="{Binding TimelineCanvasWidth}">
+                        <Border Background="#151920" Padding="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="VIDEO TRACKS"
+                                           Foreground="Transparent"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,8"
+                                           IsHitTestVisible="False" />
+
+                                <ItemsControl ItemsSource="{Binding VideoTimelineTracks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Height="58"
+                                                    Margin="0,0,0,6"
+                                                    Opacity="{Binding TrackOpacity}"
                                                     Background="#10151C"
                                                     BorderBrush="{StaticResource BorderBrushDark}"
                                                     BorderThickness="0,1,1,1"
                                                     CornerRadius="0,4,4,0"
                                                     AllowDrop="True"
+                                                    MouseLeftButtonDown="TrackLane_MouseLeftButtonDown"
                                                     Drop="TrackLane_Drop">
                                                 <Canvas Width="{Binding DataContext.TimelineCanvasWidth, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                                     <Border Width="2"
@@ -184,8 +268,8 @@
                                                                         Height="42"
                                                                         Margin="0,8,0,8"
                                                                         Background="{Binding BackgroundColor}"
-                                                                        BorderBrush="{Binding AccentColor}"
-                                                                        BorderThickness="1"
+                                                                        BorderBrush="{Binding BorderColor}"
+                                                                        BorderThickness="{Binding BorderThickness}"
                                                                         CornerRadius="4"
                                                                         PreviewMouseLeftButtonDown="Clip_PreviewMouseLeftButtonDown"
                                                                         PreviewMouseRightButtonDown="Clip_PreviewMouseRightButtonDown"
@@ -212,52 +296,33 @@
                                                     </ItemsControl>
                                                 </Canvas>
                                             </Border>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
 
-                    <Border Background="#151920">
-                        <StackPanel>
-                            <TextBlock Text="AUDIO TRACKS"
-                                       Foreground="{StaticResource TextMutedBrush}"
-                                       FontSize="11"
-                                       FontWeight="SemiBold"
-                                       Margin="0,0,0,8" />
+                        <Border Background="#151920">
+                            <StackPanel>
+                                <TextBlock Text="AUDIO TRACKS"
+                                           Foreground="Transparent"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,8"
+                                           IsHitTestVisible="False" />
 
-                            <ItemsControl ItemsSource="{Binding AudioTimelineTracks}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Margin="0,0,0,6">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="118" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <Border Grid.Column="0"
-                                                    Height="58"
-                                                    Background="#171C24"
-                                                    BorderBrush="{StaticResource BorderBrushDark}"
-                                                    BorderThickness="1"
-                                                    CornerRadius="4,0,0,4">
-                                                <StackPanel VerticalAlignment="Center" Margin="12,0">
-                                                    <TextBlock Text="{Binding Header}" FontWeight="Bold" />
-                                                    <TextBlock Text="{Binding Title}"
-                                                               Foreground="{StaticResource TextMutedBrush}"
-                                                               FontSize="11"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                </StackPanel>
-                                            </Border>
-
-                                            <Border Grid.Column="1"
-                                                    Height="58"
+                                <ItemsControl ItemsSource="{Binding AudioTimelineTracks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Height="58"
+                                                    Margin="0,0,0,6"
+                                                    Opacity="{Binding TrackOpacity}"
                                                     Background="#10151C"
                                                     BorderBrush="{StaticResource BorderBrushDark}"
                                                     BorderThickness="0,1,1,1"
                                                     CornerRadius="0,4,4,0"
                                                     AllowDrop="True"
+                                                    MouseLeftButtonDown="TrackLane_MouseLeftButtonDown"
                                                     Drop="TrackLane_Drop">
                                                 <Canvas Width="{Binding DataContext.TimelineCanvasWidth, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                                     <Border Width="2"
@@ -282,8 +347,8 @@
                                                                         Height="42"
                                                                         Margin="0,8,0,8"
                                                                         Background="{Binding BackgroundColor}"
-                                                                        BorderBrush="{Binding AccentColor}"
-                                                                        BorderThickness="1"
+                                                                        BorderBrush="{Binding BorderColor}"
+                                                                        BorderThickness="{Binding BorderThickness}"
                                                                         CornerRadius="4"
                                                                         PreviewMouseLeftButtonDown="Clip_PreviewMouseLeftButtonDown"
                                                                         PreviewMouseRightButtonDown="Clip_PreviewMouseRightButtonDown"
@@ -310,14 +375,16 @@
                                                     </ItemsControl>
                                                 </Canvas>
                                             </Border>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+                </Grid>
             </ScrollViewer>
         </Grid>
     </Border>
 </UserControl>
+

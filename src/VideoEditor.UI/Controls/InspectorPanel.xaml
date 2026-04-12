@@ -1,21 +1,92 @@
 ﻿<UserControl x:Class="VideoEditor.UI.Controls.InspectorPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </UserControl.Resources>
+
     <Border Style="{StaticResource PanelBorderStyle}">
         <StackPanel>
-            <TextBlock Text="Effects" Style="{StaticResource TitleTextStyle}" />
+            <TextBlock Text="Inspector" Style="{StaticResource TitleTextStyle}" />
 
-            <TextBlock Text="Opacity" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,2"/>
-            <Slider Minimum="0" Maximum="100" Value="100" Margin="0,0,0,10" />
+            <Button Content="Clear selection"
+                    Command="{Binding ClearTimelineSelectionCommand}"
+                    HorizontalAlignment="Stretch"
+                    Margin="0,0,0,14"
+                    Visibility="{Binding HasTimelineSelection, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-            <TextBlock Text="Scale" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,2"/>
-            <Slider Minimum="10" Maximum="300" Value="100" Margin="0,0,0,10" />
+            <StackPanel Visibility="{Binding HasSelectedVisualClip, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="Selected visual clip"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           Margin="0,0,0,10" />
 
-            <TextBlock Text="Rotation" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,2"/>
-            <Slider Minimum="-180" Maximum="180" Value="0" Margin="0,0,0,14" />
+                <TextBlock Text="Position X" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,2" />
+                <Slider Minimum="-960"
+                        Maximum="960"
+                        Value="{Binding SelectedClipFrameX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        Margin="0,0,0,2" />
+                <TextBlock Text="{Binding SelectedClipFrameX, StringFormat=X: {0:0}px}"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           FontSize="11"
+                           Margin="0,0,0,10" />
 
-            <Button Content="Add Transition" />
-            <Button Content="Add Color Filter" Margin="0,8,0,0" />
+                <TextBlock Text="Position Y" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,2" />
+                <Slider Minimum="-540"
+                        Maximum="540"
+                        Value="{Binding SelectedClipFrameY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        Margin="0,0,0,2" />
+                <TextBlock Text="{Binding SelectedClipFrameY, StringFormat=Y: {0:0}px}"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           FontSize="11"
+                           Margin="0,0,0,10" />
+
+                <TextBlock Text="Scale" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,2" />
+                <Slider Minimum="10"
+                        Maximum="300"
+                        Value="{Binding SelectedClipFrameScalePercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        Margin="0,0,0,2" />
+                <TextBlock Text="{Binding SelectedClipFrameScalePercent, StringFormat=Scale: {0:0}%}"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           FontSize="11"
+                           Margin="0,0,0,14" />
+
+                <Button Content="Reset transform"
+                        Command="{Binding ResetSelectedClipFrameCommand}"
+                        HorizontalAlignment="Stretch"
+                        Margin="0,0,0,14" />
+
+                <TextBlock Text="These values are stored per visual clip and will later be reused by FFmpeg export."
+                           TextWrapping="Wrap"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           FontSize="11" />
+            </StackPanel>
+
+            <StackPanel Visibility="{Binding HasSelectedAudioClip, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="Selected audio clip"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           Margin="0,0,0,10" />
+
+                <TextBlock Text="Volume" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,2" />
+                <Slider Minimum="0"
+                        Maximum="200"
+                        Value="{Binding SelectedClipAudioVolumePercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        Margin="0,0,0,2" />
+                <TextBlock Text="{Binding SelectedClipAudioVolumePercent, StringFormat=Volume: {0:0}%}"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           FontSize="11"
+                           Margin="0,0,0,14" />
+
+                <TextBlock Text="These values are stored per audio clip and affect preview playback immediately."
+                           TextWrapping="Wrap"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           FontSize="11" />
+            </StackPanel>
+
+            <TextBlock Text="Select a video, image, or audio clip on the timeline to edit its properties."
+                       TextWrapping="Wrap"
+                       Foreground="{StaticResource TextMutedBrush}"
+                       FontSize="11"
+                       Visibility="{Binding IsInspectorPlaceholderVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
         </StackPanel>
     </Border>
 </UserControl>
