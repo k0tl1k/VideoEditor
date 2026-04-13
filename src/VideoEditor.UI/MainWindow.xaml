@@ -13,6 +13,18 @@
         Height="840"
         Width="1440"
         WindowStartupLocation="CenterScreen">
+    <Window.InputBindings>
+        <KeyBinding Gesture="Ctrl+K"
+                    Command="{Binding SplitSelectedClipCommand}" />
+        <KeyBinding Gesture="Ctrl+A"
+                    Command="{Binding SelectAllTimelineClipsCommand}" />
+        <KeyBinding Gesture="Ctrl+Z"
+                    Command="{Binding UndoCommand}" />
+        <KeyBinding Gesture="Ctrl+Y"
+                    Command="{Binding RedoCommand}" />
+        <KeyBinding Gesture="Delete"
+                    Command="{Binding DeleteSelectedTimelineClipsCommand}" />
+    </Window.InputBindings>
     <Grid x:Name="RootGrid" Background="{StaticResource AppBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -62,6 +74,6 @@
                       ResizeBehavior="PreviousAndNext"
                       ShowsPreview="True" />
 
-        <controls:TimelinePanel Grid.Row="3" Margin="14,0,14,14" />
+        <controls:TimelinePanel x:Name="TimelinePanelControl" Grid.Row="3" Margin="14,0,14,14" />
     </Grid>
 </Window>

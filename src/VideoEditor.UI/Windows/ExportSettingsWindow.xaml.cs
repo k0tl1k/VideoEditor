@@ -3,8 +3,14 @@ using System.Windows.Input;
 
 namespace VideoEditor.UI.Windows;
 
+/// <summary>
+/// 	Окно расширенных настроек экспорта.
+/// </summary>
 public partial class ExportSettingsWindow : Window
 {
+    /// <summary>
+    /// 	Создает окно настроек экспорта.
+    /// </summary>
     public ExportSettingsWindow()
     {
         InitializeComponent();

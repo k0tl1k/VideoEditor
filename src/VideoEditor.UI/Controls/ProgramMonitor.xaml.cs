@@ -155,6 +155,9 @@ public partial class ProgramMonitor : UserControl
             case "SyncPlayback":
                 SyncPlayingPreviewPosition();
                 break;
+            case "ContinuePlayback":
+                ContinuePlayingPreviewPosition();
+                break;
         }
     }
 
@@ -334,6 +337,25 @@ public partial class ProgramMonitor : UserControl
         _clipEndTimer.Start();
     }
 
+    private void ContinuePlayingPreviewPosition()
+    {
+        var viewModel = ViewModel;
+        if (viewModel?.PreviewMediaSource is null)
+            return;
+
+        _isPreviewPlaying = true;
+        _playWhenOpened = true;
+        _seekRequestDebounceTimer.Stop();
+        _seekFrameRenderTimer.Stop();
+        _seekVisualLayerFrameRenderTimer.Stop();
+        _timelineFrameTimer.Stop();
+        ApplyVideoMuteState();
+        ApplyVideoVolume();
+        PlayVisualLayerVideos();
+        PlayAudioFromCurrentTimelineSegment();
+        _clipEndTimer.Start();
+    }
+
     private void PreviewAudioElement_MediaOpened(object sender, RoutedEventArgs e)
     {
         var viewModel = ViewModel;
@@ -380,8 +402,14 @@ public partial class ProgramMonitor : UserControl
 
     private void FinishPlayback()
     {
-        StopAtClipStart();
-        ViewModel?.CompletePreviewPlayback();
+        var viewModel = ViewModel;
+        if (viewModel is null)
+            return;
+
+        if (viewModel.TryContinueTimelinePlayback())
+            return;
+
+        viewModel.CompletePreviewPlayback();
     }
 
     private void RenderSeekFrame(TimeSpan sourceStart)

@@ -305,6 +305,12 @@
                               Margin="0,0,0,12">
                         <ComboBoxItem Content="H.264" />
                         <ComboBoxItem Content="H.265" />
+                        <ComboBoxItem Content="H.264 NVENC" />
+                        <ComboBoxItem Content="H.265 NVENC" />
+                        <ComboBoxItem Content="H.264 AMF" />
+                        <ComboBoxItem Content="H.265 AMF" />
+                        <ComboBoxItem Content="H.264 QSV" />
+                        <ComboBoxItem Content="H.265 QSV" />
                         <ComboBoxItem Content="MPEG-4" />
                     </ComboBox>
 

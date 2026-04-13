@@ -1,15 +1,17 @@
 namespace VideoEditor.Application.DI;
 
 /// <summary>
-/// 	Коллекция регистраций сервисов (singleton).
+/// 	Коллекция регистраций singleton-сервисов.
 /// </summary>
 public sealed class SimpleServiceCollection
 {
     private readonly Dictionary<Type, Func<SimpleServiceProvider, object>> _registrations = new();
 
     /// <summary>
-    /// 	Регистрирует singleton по фабрике.
+    /// 	Регистрирует singleton через фабрику.
     /// </summary>
+    /// <param name="factory"> Фабрика создания сервиса. </param>
+    /// <returns> Текущая коллекция регистраций. </returns>
     public SimpleServiceCollection AddSingleton<TService>(Func<SimpleServiceProvider, TService> factory)
         where TService : class
     {
@@ -20,6 +22,7 @@ public sealed class SimpleServiceCollection
     /// <summary>
     /// 	Регистрирует singleton по типам сервиса и реализации.
     /// </summary>
+    /// <returns> Текущая коллекция регистраций. </returns>
     public SimpleServiceCollection AddSingleton<TService, TImplementation>()
         where TService : class
         where TImplementation : class, TService
@@ -31,6 +34,7 @@ public sealed class SimpleServiceCollection
     /// <summary>
     /// 	Регистрирует singleton по конкретному типу.
     /// </summary>
+    /// <returns> Текущая коллекция регистраций. </returns>
     public SimpleServiceCollection AddSingleton<TService>()
         where TService : class
     {
@@ -39,8 +43,9 @@ public sealed class SimpleServiceCollection
     }
 
     /// <summary>
-    /// 	Строит провайдер сервисов.
+    /// 	Создает провайдер сервисов.
     /// </summary>
+    /// <returns> Провайдер сервисов. </returns>
     public SimpleServiceProvider BuildServiceProvider()
     {
         return new SimpleServiceProvider(_registrations);
