@@ -134,6 +134,78 @@ public sealed class FfmpegTimelineExportService : ITimelineExportService
     private static void AddVideoCodecArguments(ProcessStartInfo process, TimelineExportOptions options)
     {
         var normalizedCodec = options.VideoCodec.Trim().ToUpperInvariant();
+        if (normalizedCodec.Contains("NVENC", StringComparison.OrdinalIgnoreCase))
+        {
+            process.ArgumentList.Add("-c:v");
+            process.ArgumentList.Add(normalizedCodec.Contains("H.265", StringComparison.OrdinalIgnoreCase) ||
+                                     normalizedCodec.Contains("HEVC", StringComparison.OrdinalIgnoreCase)
+                ? "hevc_nvenc"
+                : "h264_nvenc");
+            process.ArgumentList.Add("-preset");
+            process.ArgumentList.Add(ResolveNvencPreset(options.Preset));
+            process.ArgumentList.Add("-rc");
+            process.ArgumentList.Add("vbr");
+            process.ArgumentList.Add("-cq");
+            process.ArgumentList.Add(options.ConstantRateFactor.ToString(CultureInfo.InvariantCulture));
+            process.ArgumentList.Add("-b:v");
+            process.ArgumentList.Add("0");
+
+            if (normalizedCodec.Contains("H.265", StringComparison.OrdinalIgnoreCase) ||
+                normalizedCodec.Contains("HEVC", StringComparison.OrdinalIgnoreCase))
+            {
+                process.ArgumentList.Add("-tag:v");
+                process.ArgumentList.Add("hvc1");
+            }
+
+            return;
+        }
+
+        if (normalizedCodec.Contains("AMF", StringComparison.OrdinalIgnoreCase))
+        {
+            process.ArgumentList.Add("-c:v");
+            process.ArgumentList.Add(normalizedCodec.Contains("H.265", StringComparison.OrdinalIgnoreCase) ||
+                                     normalizedCodec.Contains("HEVC", StringComparison.OrdinalIgnoreCase)
+                ? "hevc_amf"
+                : "h264_amf");
+            process.ArgumentList.Add("-quality");
+            process.ArgumentList.Add(ResolveAmfQuality(options.Preset));
+            process.ArgumentList.Add("-rc");
+            process.ArgumentList.Add("cqp");
+            process.ArgumentList.Add("-qp_i");
+            process.ArgumentList.Add(options.ConstantRateFactor.ToString(CultureInfo.InvariantCulture));
+            process.ArgumentList.Add("-qp_p");
+            process.ArgumentList.Add(options.ConstantRateFactor.ToString(CultureInfo.InvariantCulture));
+
+            if (normalizedCodec.Contains("H.265", StringComparison.OrdinalIgnoreCase) ||
+                normalizedCodec.Contains("HEVC", StringComparison.OrdinalIgnoreCase))
+            {
+                process.ArgumentList.Add("-tag:v");
+                process.ArgumentList.Add("hvc1");
+            }
+
+            return;
+        }
+
+        if (normalizedCodec.Contains("QSV", StringComparison.OrdinalIgnoreCase))
+        {
+            process.ArgumentList.Add("-c:v");
+            process.ArgumentList.Add(normalizedCodec.Contains("H.265", StringComparison.OrdinalIgnoreCase) ||
+                                     normalizedCodec.Contains("HEVC", StringComparison.OrdinalIgnoreCase)
+                ? "hevc_qsv"
+                : "h264_qsv");
+            process.ArgumentList.Add("-global_quality");
+            process.ArgumentList.Add(options.ConstantRateFactor.ToString(CultureInfo.InvariantCulture));
+
+            if (normalizedCodec.Contains("H.265", StringComparison.OrdinalIgnoreCase) ||
+                normalizedCodec.Contains("HEVC", StringComparison.OrdinalIgnoreCase))
+            {
+                process.ArgumentList.Add("-tag:v");
+                process.ArgumentList.Add("hvc1");
+            }
+
+            return;
+        }
+
         if (normalizedCodec is "H.265" or "HEVC" or "H265")
         {
             process.ArgumentList.Add("-c:v");
@@ -162,6 +234,27 @@ public sealed class FfmpegTimelineExportService : ITimelineExportService
         process.ArgumentList.Add(options.Preset);
         process.ArgumentList.Add("-crf");
         process.ArgumentList.Add(options.ConstantRateFactor.ToString(CultureInfo.InvariantCulture));
+    }
+
+    private static string ResolveNvencPreset(string preset)
+    {
+        return preset.Trim().ToLowerInvariant() switch
+        {
+            "ultrafast" or "veryfast" => "p1",
+            "fast" => "p3",
+            "slow" => "p7",
+            _ => "p5"
+        };
+    }
+
+    private static string ResolveAmfQuality(string preset)
+    {
+        return preset.Trim().ToLowerInvariant() switch
+        {
+            "ultrafast" or "veryfast" or "fast" => "speed",
+            "slow" => "quality",
+            _ => "balanced"
+        };
     }
 
     private static void AddInput(ProcessStartInfo process, MediaAsset asset, TimeSpan duration)

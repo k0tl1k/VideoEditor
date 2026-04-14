@@ -4,13 +4,17 @@ using System.Reflection;
 namespace VideoEditor.Application.DI;
 
 /// <summary>
-/// 	Простой DI-контейнер с поддержкой singleton и конструкторной инъекции.
+/// 	Простой DI-контейнер с singleton и constructor injection.
 /// </summary>
 public sealed class SimpleServiceProvider : IServiceProvider, IDisposable
 {
     private readonly IReadOnlyDictionary<Type, Func<SimpleServiceProvider, object>> _registrations;
     private readonly ConcurrentDictionary<Type, object> _singletons = new();
 
+    /// <summary>
+    /// 	Создает провайдер сервисов из регистраций.
+    /// </summary>
+    /// <param name="registrations"> Регистрации сервисов. </param>
     public SimpleServiceProvider(IReadOnlyDictionary<Type, Func<SimpleServiceProvider, object>> registrations)
     {
         _registrations = new Dictionary<Type, Func<SimpleServiceProvider, object>>(registrations);
@@ -40,8 +44,9 @@ public sealed class SimpleServiceProvider : IServiceProvider, IDisposable
     }
 
     /// <summary>
-    /// 	Возвращает сервис или бросает исключение, если регистрация отсутствует.
+    /// 	Возвращает сервис или бросает исключение.
     /// </summary>
+    /// <returns> Зарегистрированный сервис. </returns>
     public T GetRequiredService<T>() where T : class
     {
         return GetService(typeof(T)) as T
@@ -49,8 +54,10 @@ public sealed class SimpleServiceProvider : IServiceProvider, IDisposable
     }
 
     /// <summary>
-    /// 	Создает экземпляр типа через его самый полный конструктор.
+    /// 	Создает экземпляр типа через самый полный публичный конструктор.
     /// </summary>
+    /// <param name="implementationType"> Тип реализации. </param>
+    /// <returns> Созданный экземпляр. </returns>
     public object CreateInstance(Type implementationType)
     {
         var constructor = implementationType

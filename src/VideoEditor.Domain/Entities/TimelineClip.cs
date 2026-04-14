@@ -13,17 +13,27 @@ public sealed class TimelineClip : EntityBase
     /// <summary>
     /// 	Идентификатор группы связанных клипов (например, видео и аудио одного файла).
     /// </summary>
-    public Guid? LinkedGroupId { get; init; }
+    public Guid? LinkedGroupId { get; set; }
 
     /// <summary>
     /// 	Точка начала в исходном файле.
     /// </summary>
-    public TimeSpan SourceStart { get; init; } = TimeSpan.Zero;
+    public TimeSpan SourceStart { get; set; } = TimeSpan.Zero;
 
     /// <summary>
     /// 	Длительность выбранного фрагмента исходника.
     /// </summary>
-    public TimeSpan SourceDuration { get; init; } = TimeSpan.Zero;
+    public TimeSpan SourceDuration { get; set; } = TimeSpan.Zero;
+
+    /// <summary>
+    /// 	Базовая точка начала фрагмента, к которой возвращается trim reset.
+    /// </summary>
+    public TimeSpan TrimBaselineSourceStart { get; set; } = TimeSpan.Zero;
+
+    /// <summary>
+    /// 	Базовая длительность фрагмента, к которой возвращается trim reset.
+    /// </summary>
+    public TimeSpan TrimBaselineSourceDuration { get; set; } = TimeSpan.Zero;
 
     /// <summary>
     /// 	Позиция начала клипа на таймлайне.
@@ -51,7 +61,21 @@ public sealed class TimelineClip : EntityBase
     public double AudioVolume { get; set; } = 1.0;
 
     /// <summary>
+    /// 	Признак, что встроенный звук видеоклипа должен быть заглушен.
+    /// </summary>
+    public bool MuteEmbeddedAudio { get; set; }
+
+    /// <summary>
     /// 	Вычисляемая позиция конца клипа на таймлайне.
     /// </summary>
     public TimeSpan TimelineEnd => TimelineStart + SourceDuration;
+
+    /// <summary>
+    /// 	Сохраняет текущее trim-состояние как базовое.
+    /// </summary>
+    public void CaptureTrimBaseline()
+    {
+        TrimBaselineSourceStart = SourceStart;
+        TrimBaselineSourceDuration = SourceDuration;
+    }
 }

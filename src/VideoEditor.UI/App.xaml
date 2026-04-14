@@ -24,6 +24,7 @@
         <SolidColorBrush x:Key="AccentWarmBrush" Color="{StaticResource ColorAccentWarm}" />
         <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource ColorDanger}" />
         <conv:IconFileToImageSourceConverter x:Key="IconFileToImageSourceConverter" />
+        <conv:BoolToTimelineCursorConverter x:Key="BoolToTimelineCursorConverter" />
 
         <LinearGradientBrush x:Key="AppBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
             <GradientStop Color="#05070D" Offset="0" />

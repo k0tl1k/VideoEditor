@@ -4,6 +4,9 @@ using VideoEditor.Domain.Enums;
 
 namespace VideoEditor.UI.ViewModels;
 
+/// <summary>
+/// 	Визуальный слой предпросмотра для композиции таймлайна.
+/// </summary>
 public sealed class PreviewVisualLayerViewModel : INotifyPropertyChanged
 {
     private double _scale;
@@ -13,12 +16,24 @@ public sealed class PreviewVisualLayerViewModel : INotifyPropertyChanged
     private double _y;
     private int _zIndex;
 
+    /// <summary>
+    /// 	Идентификатор клипа, которому принадлежит слой.
+    /// </summary>
     public required Guid ClipId { get; init; }
 
+    /// <summary>
+    /// 	Источник медиафайла для предпросмотра.
+    /// </summary>
     public required Uri Source { get; init; }
 
+    /// <summary>
+    /// 	Тип медиафайла.
+    /// </summary>
     public required MediaType MediaType { get; init; }
 
+    /// <summary>
+    /// 	Начало фрагмента внутри исходника.
+    /// </summary>
     public required TimeSpan SourceStart
     {
         get => _sourceStart;
@@ -32,6 +47,9 @@ public sealed class PreviewVisualLayerViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// 	Длительность фрагмента внутри исходника.
+    /// </summary>
     public required TimeSpan SourceDuration
     {
         get => _sourceDuration;
@@ -45,6 +63,9 @@ public sealed class PreviewVisualLayerViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// 	Позиция слоя по X в кадре предпросмотра.
+    /// </summary>
     public required double X
     {
         get => _x;
@@ -58,6 +79,9 @@ public sealed class PreviewVisualLayerViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// 	Позиция слоя по Y в кадре предпросмотра.
+    /// </summary>
     public required double Y
     {
         get => _y;
@@ -71,6 +95,9 @@ public sealed class PreviewVisualLayerViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// 	Масштаб слоя в кадре предпросмотра.
+    /// </summary>
     public required double Scale
     {
         get => _scale;
@@ -84,6 +111,9 @@ public sealed class PreviewVisualLayerViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// 	Порядок слоя в композиции.
+    /// </summary>
     public required int ZIndex
     {
         get => _zIndex;
@@ -97,8 +127,14 @@ public sealed class PreviewVisualLayerViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// 	Показывает, что слой является изображением.
+    /// </summary>
     public bool IsImage => MediaType == MediaType.Image;
 
+    /// <summary>
+    /// 	Показывает, что слой является видео.
+    /// </summary>
     public bool IsVideo => MediaType == MediaType.Video;
 
     public event PropertyChangedEventHandler? PropertyChanged;

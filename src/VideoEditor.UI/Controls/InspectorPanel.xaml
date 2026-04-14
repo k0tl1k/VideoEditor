@@ -6,19 +6,65 @@
     </UserControl.Resources>
 
     <Border Style="{StaticResource PanelBorderStyle}">
-        <StackPanel>
-            <TextBlock Text="Inspector" Style="{StaticResource TitleTextStyle}" />
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Background="Transparent">
+            <StackPanel>
+                <TextBlock Text="Inspector" Style="{StaticResource TitleTextStyle}" />
 
-            <Button Content="Clear selection"
-                    Command="{Binding ClearTimelineSelectionCommand}"
-                    HorizontalAlignment="Stretch"
-                    Margin="0,0,0,14"
-                    Visibility="{Binding HasTimelineSelection, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <Button Content="Clear selection"
+                        Command="{Binding ClearTimelineSelectionCommand}"
+                        HorizontalAlignment="Stretch"
+                        Margin="0,0,0,14"
+                        Visibility="{Binding HasTimelineSelection, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-            <StackPanel Visibility="{Binding HasSelectedVisualClip, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <TextBlock Text="Selected visual clip"
-                           Foreground="{StaticResource TextMutedBrush}"
-                           Margin="0,0,0,10" />
+                <StackPanel Visibility="{Binding HasTimelineSelection, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            Margin="0,0,0,14">
+                    <TextBlock Text="Trim selected clip"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Margin="0,0,0,10" />
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Start, sec" Foreground="{StaticResource TextMutedBrush}" FontSize="11" Margin="0,0,0,3" />
+                            <TextBox Text="{Binding SelectedClipTrimStartSeconds, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=0.###}"
+                                     MinHeight="28"
+                                     VerticalContentAlignment="Center" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="End, sec" Foreground="{StaticResource TextMutedBrush}" FontSize="11" Margin="0,0,0,3" />
+                            <TextBox Text="{Binding SelectedClipTrimEndSeconds, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=0.###}"
+                                     MinHeight="28"
+                                     VerticalContentAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Button Content="Reset trim"
+                            Command="{Binding ResetSelectedClipTrimCommand}"
+                            HorizontalAlignment="Stretch"
+                            Margin="0,0,0,8" />
+
+                    <TextBlock Text="{Binding SelectedClipTrimLabel}"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               FontSize="11"
+                               Margin="0,0,0,6" />
+                    <TextBlock Text="Trim changes the selected clip's source fragment. Linked video and audio clips are trimmed together."
+                               TextWrapping="Wrap"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               FontSize="11" />
+                </StackPanel>
+
+                <StackPanel Visibility="{Binding HasSelectedVisualClip, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Text="Selected visual clip"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Margin="0,0,0,10" />
 
                 <TextBlock Text="Position X" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,2" />
                 <Slider Minimum="-960"
@@ -61,10 +107,10 @@
                            FontSize="11" />
             </StackPanel>
 
-            <StackPanel Visibility="{Binding HasSelectedAudioClip, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <TextBlock Text="Selected audio clip"
-                           Foreground="{StaticResource TextMutedBrush}"
-                           Margin="0,0,0,10" />
+                <StackPanel Visibility="{Binding HasSelectedAudioClip, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Text="Selected audio clip"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Margin="0,0,0,10" />
 
                 <TextBlock Text="Volume" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,2" />
                 <Slider Minimum="0"
@@ -80,13 +126,14 @@
                            TextWrapping="Wrap"
                            Foreground="{StaticResource TextMutedBrush}"
                            FontSize="11" />
-            </StackPanel>
+                </StackPanel>
 
-            <TextBlock Text="Select a video, image, or audio clip on the timeline to edit its properties."
-                       TextWrapping="Wrap"
-                       Foreground="{StaticResource TextMutedBrush}"
-                       FontSize="11"
-                       Visibility="{Binding IsInspectorPlaceholderVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
-        </StackPanel>
+                <TextBlock Text="Select a video, image, or audio clip on the timeline to edit its properties."
+                           TextWrapping="Wrap"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           FontSize="11"
+                           Visibility="{Binding IsInspectorPlaceholderVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            </StackPanel>
+        </ScrollViewer>
     </Border>
 </UserControl>
