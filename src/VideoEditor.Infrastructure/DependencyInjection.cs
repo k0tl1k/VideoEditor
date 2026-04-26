@@ -17,6 +17,8 @@ public static class DependencyInjection
     public static SimpleServiceCollection AddInfrastructureServices(this SimpleServiceCollection services)
     {
         services.AddSingleton<IProjectPathService, FileSystemProjectPathService>();
+        services.AddSingleton<IProjectFileService, JsonProjectFileService>();
+        services.AddSingleton<IRecentProjectService, RecentProjectService>();
         services.AddSingleton<IMediaDurationService, MediaDurationService>();
         services.AddSingleton<IMediaThumbnailService, MediaThumbnailService>();
         services.AddSingleton<IAudioWaveformService, FfmpegAudioWaveformService>();

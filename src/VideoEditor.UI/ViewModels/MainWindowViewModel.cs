@@ -71,6 +71,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly IMediaImportService _mediaImportService;
     private readonly IMediaThumbnailService _mediaThumbnailService;
     private readonly IAudioWaveformService _audioWaveformService;
+    private readonly IProjectFileService _projectFileService;
+    private readonly IProjectBootstrapService _projectBootstrapService;
+    private readonly IProjectPathService _projectPathService;
+    private readonly IRecentProjectService _recentProjectService;
     private readonly ITimelineExportService _timelineExportService;
     private readonly RelayCommand _browseExportOutputPathCommand;
     private readonly RelayCommand _exportProjectCommand;
@@ -91,6 +95,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private readonly RelayCommand _redoCommand;
     private readonly RelayCommand _zoomInTimelineCommand;
     private readonly RelayCommand _zoomOutTimelineCommand;
+    private readonly RelayCommand _saveProjectCommand;
+    private readonly RelayCommand _saveProjectAsCommand;
+    private readonly RelayCommand _loadProjectCommand;
     private readonly Stack<ProjectSnapshot> _undoStack = new();
     private readonly Stack<ProjectSnapshot> _redoStack = new();
     private readonly List<CopiedTimelineClip> _copiedTimelineClips = new();
@@ -146,16 +153,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private string _previewStatusText = "Add a clip to the timeline, then select it for preview.";
     private string _previewTitle = "No clip selected";
     private int _timelineZoomIndex = 11;
+    private string? _currentProjectFilePath;
 
     /// <summary>
     /// 	Текущий проект в сессии редактора.
     /// </summary>
-    public VideoProject CurrentProject { get; }
+    public VideoProject CurrentProject { get; private set; }
 
     /// <summary>
     /// 	Путь хранения данных текущего проекта.
     /// </summary>
-    public string ProjectDirectory { get; }
+    public string ProjectDirectory { get; private set; }
 
     /// <summary>
     /// 	Импортированные ассеты для отображения в панели проекта.
@@ -226,6 +234,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public ICommand BrowseExportOutputPathCommand { get; }
 
     public ICommand ExportProjectCommand { get; }
+
+    public ICommand SaveProjectCommand { get; }
+
+    public ICommand SaveProjectAsCommand { get; }
+
+    public ICommand LoadProjectCommand { get; }
 
     /// <summary>
     /// 	Команда вставки выбранного медиафайла на таймлайн.
@@ -1185,7 +1199,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         ImportedMedia.Clear();
         foreach (var asset in CurrentProject.MediaAssets)
         {
-            var thumbnailPath = _mediaThumbnailService.GetThumbnailPath(asset);
+            var thumbnailPath = TryGetThumbnailPath(asset);
             ImportedMedia.Add(new ImportedMediaItemViewModel(asset, thumbnailPath));
         }
 
@@ -1487,11 +1501,17 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         IMediaImportService mediaImportService,
         IMediaThumbnailService mediaThumbnailService,
         IAudioWaveformService audioWaveformService,
+        IProjectFileService projectFileService,
+        IRecentProjectService recentProjectService,
         ITimelineExportService timelineExportService)
     {
+        _projectBootstrapService = projectBootstrapService;
+        _projectPathService = projectPathService;
         _mediaImportService = mediaImportService;
         _mediaThumbnailService = mediaThumbnailService;
         _audioWaveformService = audioWaveformService;
+        _projectFileService = projectFileService;
+        _recentProjectService = recentProjectService;
         _timelineExportService = timelineExportService;
 
         CurrentProject = projectBootstrapService.CreateDefaultProject("Diploma Project");
@@ -1516,6 +1536,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _redoCommand = new RelayCommand(Redo, CanRedo);
           _zoomInTimelineCommand = new RelayCommand(ZoomInTimeline, CanZoomInTimeline);
           _zoomOutTimelineCommand = new RelayCommand(ZoomOutTimeline, CanZoomOutTimeline);
+        _saveProjectCommand = new RelayCommand(SaveProject);
+        _saveProjectAsCommand = new RelayCommand(SaveProjectAs);
+        _loadProjectCommand = new RelayCommand(LoadProject);
 
         ImportedMediaView = CollectionViewSource.GetDefaultView(ImportedMedia);
         ImportedMediaView.Filter = FilterImportedMedia;
@@ -1523,6 +1546,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         ImportMediaCommand = new RelayCommand(ImportMedia);
         BrowseExportOutputPathCommand = _browseExportOutputPathCommand;
         ExportProjectCommand = _exportProjectCommand;
+        SaveProjectCommand = _saveProjectCommand;
+        SaveProjectAsCommand = _saveProjectAsCommand;
+        LoadProjectCommand = _loadProjectCommand;
         InsertSelectedMediaToTimelineCommand = _insertSelectedMediaToTimelineCommand;
         SplitSelectedClipCommand = _splitSelectedClipCommand;
         PlayPreviewCommand = _playPreviewCommand;
@@ -1546,6 +1572,34 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         RefreshTimelinePresentation();
     }
 
+    public void CreateNewProject(string projectName)
+    {
+        var safeName = string.IsNullOrWhiteSpace(projectName)
+            ? "New Project"
+            : projectName.Trim();
+
+        var project = _projectBootstrapService.CreateDefaultProject(safeName);
+        LoadProjectIntoEditor(project, filePath: null, projectDirectory: _projectPathService.BuildProjectDirectory(safeName));
+        PreviewStatusText = $"Project created: {safeName}";
+    }
+
+    public bool LoadProjectFromFile(string filePath)
+    {
+        try
+        {
+            var loadedProject = _projectFileService.Load(filePath);
+            LoadProjectIntoEditor(loadedProject, filePath, Path.GetDirectoryName(filePath));
+            _recentProjectService.AddRecentProject(filePath);
+            PreviewStatusText = $"Project loaded: {Path.GetFileName(filePath)}";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            PreviewStatusText = $"Project load failed: {BuildFriendlyErrorMessage(ex)}";
+            return false;
+        }
+    }
+
     private void ImportMedia()
     {
         var dialog = new OpenFileDialog
@@ -1558,6 +1612,134 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             return;
 
         ImportMediaFiles(dialog.FileNames);
+    }
+
+    private void SaveProject()
+    {
+        if (string.IsNullOrWhiteSpace(_currentProjectFilePath))
+        {
+            SaveProjectAs();
+            return;
+        }
+
+        SaveProjectToFile(_currentProjectFilePath);
+    }
+
+    private void SaveProjectAs()
+    {
+        var dialog = new SaveFileDialog
+        {
+            Filter = "VideoEditor project|*.vedproj|JSON project|*.json|All files|*.*",
+            FileName = ResolveDefaultProjectFileName(),
+            InitialDirectory = Directory.Exists(ProjectDirectory) ? ProjectDirectory : null,
+            AddExtension = true,
+            DefaultExt = ".vedproj",
+            OverwritePrompt = true
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        SaveProjectToFile(dialog.FileName);
+    }
+
+    private void LoadProject()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "VideoEditor project|*.vedproj;*.json|All files|*.*",
+            Multiselect = false,
+            InitialDirectory = Directory.Exists(ProjectDirectory) ? ProjectDirectory : null
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            LoadProjectFromFile(dialog.FileName);
+        }
+        catch (Exception ex)
+        {
+            PreviewStatusText = $"Project load failed: {BuildFriendlyErrorMessage(ex)}";
+        }
+    }
+
+    private void SaveProjectToFile(string filePath)
+    {
+        try
+        {
+            _projectFileService.Save(CurrentProject, filePath);
+            _currentProjectFilePath = filePath;
+            _recentProjectService.AddRecentProject(filePath);
+            ProjectDirectory = Path.GetDirectoryName(filePath) ?? ProjectDirectory;
+            PreviewStatusText = $"Project saved: {Path.GetFileName(filePath)}";
+            OnPropertyChanged(nameof(ProjectDirectory));
+        }
+        catch (Exception ex)
+        {
+            PreviewStatusText = $"Project save failed: {BuildFriendlyErrorMessage(ex)}";
+        }
+    }
+
+    private string ResolveDefaultProjectFileName()
+    {
+        if (!string.IsNullOrWhiteSpace(_currentProjectFilePath))
+            return Path.GetFileName(_currentProjectFilePath);
+
+        var safeName = string.Join("_", CurrentProject.Name.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
+        if (string.IsNullOrWhiteSpace(safeName))
+            safeName = "VideoEditorProject";
+
+        return $"{safeName}.vedproj";
+    }
+
+    private void LoadProjectIntoEditor(VideoProject project, string? filePath, string? projectDirectory = null)
+    {
+        ResetCoalescedUndoState();
+        _undoStack.Clear();
+        _redoStack.Clear();
+        _selectedTimelineClipIds.Clear();
+        _selectedTimelineClipId = null;
+        _selectedVisualClip = null;
+        _selectedAudioClip = null;
+        _previewClipId = null;
+        _previewBaseVisualClip = null;
+        _previewMediaType = null;
+        _draggedTimelineClipId = null;
+        _draggedTimelineClipIds.Clear();
+        _isTimelinePlaybackActive = false;
+        IsTimelineGapPreview = false;
+        PreviewGapDuration = TimeSpan.Zero;
+        PreviewAudioSource = null;
+        PreviewAudioSourceStart = TimeSpan.Zero;
+        PreviewAudioSourceDuration = TimeSpan.Zero;
+        PreviewMediaSource = null;
+        PreviewSourceStart = TimeSpan.Zero;
+        PreviewSourceDuration = TimeSpan.Zero;
+        PreviewVisualLayers.Clear();
+        IsPreviewVideoAudioMuted = false;
+        CurrentProject = project;
+        _currentProjectFilePath = filePath;
+        ProjectDirectory = !string.IsNullOrWhiteSpace(projectDirectory)
+            ? projectDirectory
+            : !string.IsNullOrWhiteSpace(filePath)
+                ? Path.GetDirectoryName(filePath) ?? ProjectDirectory
+                : _projectPathService.BuildProjectDirectory(CurrentProject.Name);
+        ExportOutputPath = Path.Combine(ProjectDirectory, "Exports", $"{CurrentProject.Name}.mp4");
+        TimelinePlaybackPosition = TimeSpan.Zero;
+        PreviewTitle = "No clip selected";
+        RebuildImportedMediaItems();
+        RefreshActiveSelectionFromSelectedId();
+        RefreshSelectedClipFrameProperties();
+        RefreshSelectedAudioClipProperties();
+        RefreshSelectedClipTrimProperties();
+        RefreshTimelinePresentation();
+        RefreshTimelineSelectionCommandState();
+        RefreshHistoryCommandState();
+        OnPropertyChanged(nameof(CurrentProject));
+        OnPropertyChanged(nameof(ProjectDirectory));
+        RequestPreviewPlayback("Stop");
     }
 
     /// <summary>

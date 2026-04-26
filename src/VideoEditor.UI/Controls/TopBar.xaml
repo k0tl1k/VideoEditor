@@ -12,6 +12,27 @@
         </Border.Background>
         <DockPanel LastChildFill="False">
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                <Button ToolTip="Save project"
+                        ToolTipService.ShowOnDisabled="True"
+                        Command="{Binding SaveProjectCommand}"
+                        Margin="0,0,8,0">
+                    <TextBlock Text="Save" />
+                </Button>
+                <Button ToolTip="Save project as"
+                        ToolTipService.ShowOnDisabled="True"
+                        Command="{Binding SaveProjectAsCommand}"
+                        Margin="0,0,8,0">
+                    <TextBlock Text="Save As" />
+                </Button>
+                <Button ToolTip="Load project"
+                        ToolTipService.ShowOnDisabled="True"
+                        Tag="folder.svg"
+                        Command="{Binding LoadProjectCommand}"
+                        Margin="0,0,8,0">
+                    <Image Width="14"
+                           Height="14"
+                           Source="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Tag, Converter={StaticResource IconFileToImageSourceConverter}}" />
+                </Button>
                 <Button ToolTip="Split selected clip at playhead"
                         ToolTipService.ShowOnDisabled="True"
                         Tag="trim.svg"
