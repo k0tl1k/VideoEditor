@@ -263,7 +263,7 @@ public partial class ProgramMonitor : UserControl
         _playAudioWhenOpened = false;
         _clipEndTimer.Stop();
         PreviewAudioElement.Stop();
-        ViewModel?.FailPreviewPlayback();
+        ViewModel?.FailPreviewPlayback(BuildMediaFailureMessage(e, "could not play this media file."));
     }
 
     private void ClipEndTimer_Tick(object? sender, EventArgs e)
@@ -373,6 +373,7 @@ public partial class ProgramMonitor : UserControl
     {
         _playAudioWhenOpened = false;
         PreviewAudioElement.Stop();
+        ViewModel?.FailPreviewPlayback(BuildMediaFailureMessage(e, "could not play audio for this timeline segment."));
     }
 
     private void TimelineFrameTimer_Tick(object? sender, EventArgs e)
@@ -533,6 +534,15 @@ public partial class ProgramMonitor : UserControl
 
         mediaElement.Stop();
         _visualLayerMediaElements.Remove(mediaElement);
+        ViewModel?.FailPreviewPlayback(BuildMediaFailureMessage(e, "could not play one of the visual layers."));
+    }
+
+    private static string BuildMediaFailureMessage(ExceptionRoutedEventArgs e, string fallback)
+    {
+        var detail = e.ErrorException?.Message;
+        return string.IsNullOrWhiteSpace(detail)
+            ? fallback
+            : detail;
     }
 
     private void PlayVisualLayerVideos()

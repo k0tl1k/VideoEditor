@@ -70,6 +70,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private readonly IMediaImportService _mediaImportService;
     private readonly IMediaThumbnailService _mediaThumbnailService;
+    private readonly IAudioWaveformService _audioWaveformService;
     private readonly ITimelineExportService _timelineExportService;
     private readonly RelayCommand _browseExportOutputPathCommand;
     private readonly RelayCommand _exportProjectCommand;
@@ -1485,10 +1486,12 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         IProjectPathService projectPathService,
         IMediaImportService mediaImportService,
         IMediaThumbnailService mediaThumbnailService,
+        IAudioWaveformService audioWaveformService,
         ITimelineExportService timelineExportService)
     {
         _mediaImportService = mediaImportService;
         _mediaThumbnailService = mediaThumbnailService;
+        _audioWaveformService = audioWaveformService;
         _timelineExportService = timelineExportService;
 
         CurrentProject = projectBootstrapService.CreateDefaultProject("Diploma Project");
@@ -1563,8 +1566,33 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     /// <param name="filePaths"> Пути к файлам для импорта. </param>
     public void ImportMediaFiles(IEnumerable<string> filePaths)
     {
-        var imported = _mediaImportService.Import(filePaths);
+        var requestedPaths = filePaths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (requestedPaths.Count == 0)
+        {
+            PreviewStatusText = "Import skipped: no files selected.";
+            return;
+        }
 
+        var missingCount = requestedPaths.Count(path => !File.Exists(path));
+        var unsupportedCount = requestedPaths.Count(path =>
+            File.Exists(path) && !MediaFileFormats.IsSupportedExtension(Path.GetExtension(path)));
+
+        IReadOnlyList<MediaAsset> imported;
+        try
+        {
+            imported = _mediaImportService.Import(requestedPaths);
+        }
+        catch (Exception ex)
+        {
+            PreviewStatusText = $"Import failed: {BuildFriendlyErrorMessage(ex)}";
+            return;
+        }
+
+        var addedCount = 0;
+        var duplicateCount = 0;
         foreach (var asset in imported)
         {
             var existingAsset = CurrentProject.MediaAssets.FirstOrDefault(x =>
@@ -1577,7 +1605,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
                 if (existingItem is not null && !existingItem.HasThumbnail)
                 {
-                    var refreshedThumbnail = _mediaThumbnailService.GetThumbnailPath(existingAsset);
+                    var refreshedThumbnail = TryGetThumbnailPath(existingAsset);
                     if (!string.IsNullOrWhiteSpace(refreshedThumbnail))
                     {
                         var index = ImportedMedia.IndexOf(existingItem);
@@ -1585,14 +1613,18 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
                     }
                 }
 
+                duplicateCount++;
                 continue;
             }
 
             CurrentProject.MediaAssets.Add(asset);
-            var thumbnailPath = _mediaThumbnailService.GetThumbnailPath(asset);
+            var thumbnailPath = TryGetThumbnailPath(asset);
             ImportedMedia.Add(new ImportedMediaItemViewModel(asset, thumbnailPath));
             ImportedMediaView.Refresh();
+            addedCount++;
         }
+
+        PreviewStatusText = BuildImportStatusText(addedCount, duplicateCount, unsupportedCount, missingCount);
     }
 
     /// <summary>
@@ -1690,6 +1722,51 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
                media.Asset.FilePath.Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 
+    private string? TryGetThumbnailPath(MediaAsset asset)
+    {
+        try
+        {
+            return _mediaThumbnailService.GetThumbnailPath(asset);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string BuildImportStatusText(int addedCount, int duplicateCount, int unsupportedCount, int missingCount)
+    {
+        var parts = new List<string>();
+        if (addedCount > 0)
+            parts.Add($"imported {addedCount}");
+
+        if (duplicateCount > 0)
+            parts.Add($"duplicates {duplicateCount}");
+
+        if (unsupportedCount > 0)
+            parts.Add($"unsupported {unsupportedCount}");
+
+        if (missingCount > 0)
+            parts.Add($"missing {missingCount}");
+
+        return parts.Count == 0
+            ? "Import skipped: no supported media files found."
+            : $"Import: {string.Join(", ", parts)}.";
+    }
+
+    private static string BuildFriendlyErrorMessage(Exception ex)
+    {
+        return ex switch
+        {
+            UnauthorizedAccessException => "access to the file or folder was denied.",
+            DirectoryNotFoundException => "target folder was not found.",
+            FileNotFoundException => "one of the media files was not found.",
+            IOException => string.IsNullOrWhiteSpace(ex.Message) ? "file operation failed." : ex.Message,
+            InvalidOperationException => string.IsNullOrWhiteSpace(ex.Message) ? "operation could not be completed." : ex.Message,
+            _ => string.IsNullOrWhiteSpace(ex.Message) ? "unexpected error." : ex.Message
+        };
+    }
+
     private bool CanExportProject()
     {
         return !IsExporting &&
@@ -1728,6 +1805,13 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         try
         {
+            var validationError = ValidateExportRequest();
+            if (!string.IsNullOrWhiteSpace(validationError))
+            {
+                PreviewStatusText = validationError;
+                return;
+            }
+
             if (UseCustomExportRange && ExportRangeEndSeconds <= ExportRangeStartSeconds)
             {
                 PreviewStatusText = "Export failed: end time must be greater than start time.";
@@ -1763,12 +1847,37 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         catch (Exception ex)
         {
             ExportProgressText = "Export failed.";
-            PreviewStatusText = $"Export failed: {ex.Message}";
+            PreviewStatusText = $"Export failed: {BuildFriendlyErrorMessage(ex)}";
         }
         finally
         {
             IsExporting = false;
         }
+    }
+
+    private string? ValidateExportRequest()
+    {
+        if (string.IsNullOrWhiteSpace(ExportOutputPath))
+            return "Export failed: choose an output file first.";
+
+        var enabledClips = CurrentProject.Tracks
+            .Where(track => track.IsEnabled)
+            .SelectMany(track => track.Clips)
+            .ToList();
+        if (enabledClips.Count == 0)
+            return "Export failed: timeline has no enabled clips.";
+
+        foreach (var clip in enabledClips)
+        {
+            var asset = CurrentProject.MediaAssets.FirstOrDefault(item => item.Id == clip.MediaAssetId);
+            if (asset is null || string.IsNullOrWhiteSpace(asset.FilePath))
+                return "Export failed: one timeline media file is missing.";
+
+            if (!File.Exists(asset.FilePath))
+                return $"Export failed: source file not found ({Path.GetFileName(asset.FilePath)}).";
+        }
+
+        return null;
     }
 
     private string? ResolveInitialExportDirectory()
@@ -2068,7 +2177,10 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
                     Width = Math.Max(4, clip.SourceDuration.TotalSeconds * CurrentTimelinePixelsPerSecond),
                     IsSelected = _selectedTimelineClipIds.Contains(clip.Id),
                     IsLinkedClip = clip.LinkedGroupId is not null,
-                    IsDragging = _draggedTimelineClipIds.Contains(clip.Id)
+                    IsDragging = _draggedTimelineClipIds.Contains(clip.Id),
+                    WaveformPeaks = IsTrackOfKind(track, "Audio")
+                        ? ResolveClipWaveformPeaks(asset, clip)
+                        : Array.Empty<double>()
                 });
             }
 
@@ -2088,6 +2200,28 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             foreach (var clip in track.Clips)
                 clip.IsDragging = _draggedTimelineClipIds.Contains(clip.ClipId);
         }
+    }
+
+    private IReadOnlyList<double> ResolveClipWaveformPeaks(MediaAsset asset, TimelineClip clip)
+    {
+        var waveform = _audioWaveformService.GetWaveform(asset, ProjectDirectory);
+        if (waveform.Peaks.Count == 0 || asset.Duration <= TimeSpan.Zero)
+            return Array.Empty<double>();
+
+        var startRatio = Math.Clamp(clip.SourceStart.TotalSeconds / asset.Duration.TotalSeconds, 0, 1);
+        var endRatio = Math.Clamp((clip.SourceStart + clip.SourceDuration).TotalSeconds / asset.Duration.TotalSeconds, startRatio, 1);
+        var startIndex = Math.Min(waveform.Peaks.Count - 1, (int)Math.Floor(startRatio * waveform.Peaks.Count));
+        var endIndex = Math.Min(waveform.Peaks.Count, Math.Max(startIndex + 1, (int)Math.Ceiling(endRatio * waveform.Peaks.Count)));
+        var count = endIndex - startIndex;
+
+        if (count <= 0)
+            return Array.Empty<double>();
+
+        var peaks = new double[count];
+        for (var i = 0; i < count; i++)
+            peaks[i] = waveform.Peaks[startIndex + i];
+
+        return peaks;
     }
 
     private int ResolveTimelineSecondTickStep(int totalSeconds)
@@ -2579,6 +2713,101 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         RefreshCurrentTimelinePreviewAfterEdit();
     }
 
+    public bool TrimClipEdge(Guid clipId, bool trimLeftEdge, double canvasLeft, bool saveUndo = true)
+    {
+        var clipInfo = FindClipWithTrack(clipId);
+        if (clipInfo is null)
+            return false;
+
+        var (track, clip) = clipInfo.Value;
+        var asset = CurrentProject.MediaAssets.FirstOrDefault(x => x.Id == clip.MediaAssetId);
+        if (asset is null)
+            return false;
+
+        var minDuration = TimeSpan.FromSeconds(1.0 / TimelineFrameRate);
+        var targetPosition = SnapTimelineTime(TimeSpan.FromSeconds(Math.Max(0, canvasLeft / CurrentTimelinePixelsPerSecond)));
+        var relatedClips = ResolveLinkedTimelineClips(track, clip).ToList();
+        var relatedIds = relatedClips.Select(x => x.Clip.Id).ToHashSet();
+        var previousBoundary = ResolvePreviousClipBoundary(relatedClips, relatedIds);
+        var nextBoundary = ResolveNextClipBoundary(relatedClips, relatedIds);
+        var oldStart = clip.TimelineStart;
+        var oldEnd = clip.TimelineEnd;
+        var oldSourceStart = clip.SourceStart;
+        var oldSourceDuration = clip.SourceDuration;
+        var sourceLimit = asset.Duration > TimeSpan.Zero
+            ? asset.Duration
+            : oldSourceStart + oldSourceDuration;
+
+        TimeSpan newStart;
+        TimeSpan newSourceStart;
+        TimeSpan newSourceDuration;
+
+        if (trimLeftEdge)
+        {
+            var earliestFromSource = oldStart - oldSourceStart;
+            if (earliestFromSource < TimeSpan.Zero)
+                earliestFromSource = TimeSpan.Zero;
+
+            var minimumStart = MaxTimeSpan(TimeSpan.Zero, previousBoundary, earliestFromSource);
+            var maximumStart = oldEnd - minDuration;
+            if (maximumStart < minimumStart)
+                maximumStart = minimumStart;
+
+            newStart = ClampTimeSpan(targetPosition, minimumStart, maximumStart);
+            var delta = newStart - oldStart;
+            newSourceStart = oldSourceStart + delta;
+            newSourceDuration = oldSourceDuration - delta;
+        }
+        else
+        {
+            var maximumEnd = oldStart + (sourceLimit - oldSourceStart);
+            if (nextBoundary is not null && nextBoundary.Value < maximumEnd)
+                maximumEnd = nextBoundary.Value;
+
+            var minimumEnd = oldStart + minDuration;
+            if (maximumEnd < minimumEnd)
+                maximumEnd = minimumEnd;
+
+            var newEnd = ClampTimeSpan(targetPosition, minimumEnd, maximumEnd);
+            newStart = oldStart;
+            newSourceStart = oldSourceStart;
+            newSourceDuration = newEnd - oldStart;
+        }
+
+        newSourceStart = SnapTimelineTime(newSourceStart);
+        newSourceDuration = SnapTimelineTime(newSourceDuration);
+        newStart = SnapTimelineTime(newStart);
+
+        if (newSourceDuration < minDuration)
+            newSourceDuration = minDuration;
+
+        var isSameTrim =
+            Math.Abs((clip.TimelineStart - newStart).TotalSeconds) < 0.001 &&
+            Math.Abs((clip.SourceStart - newSourceStart).TotalSeconds) < 0.001 &&
+            Math.Abs((clip.SourceDuration - newSourceDuration).TotalSeconds) < 0.001;
+
+        if (isSameTrim)
+            return false;
+
+        if (saveUndo)
+            SaveUndoSnapshot();
+
+        foreach (var (_, relatedClip) in relatedClips)
+        {
+            if (trimLeftEdge)
+                relatedClip.TimelineStart = newStart;
+
+            relatedClip.SourceStart = newSourceStart;
+            relatedClip.SourceDuration = newSourceDuration;
+        }
+
+        RefreshTimelinePresentation();
+        RefreshSelectedClipTrimProperties();
+        RefreshCurrentTimelinePreviewAfterEdit();
+        PreviewStatusText = trimLeftEdge ? "Clip start trimmed." : "Clip end trimmed.";
+        return true;
+    }
+
     private bool CanSplitSelectedClip()
     {
         return FindClipToSplitAtCurrentPosition() is not null;
@@ -3017,12 +3246,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         return true;
     }
 
-    public void FailPreviewPlayback()
+    public void FailPreviewPlayback(string? detail = null)
     {
         if (!HasPreviewMedia)
             return;
 
-        PreviewStatusText = "Could not play this media file.";
+        PreviewStatusText = string.IsNullOrWhiteSpace(detail)
+            ? "Preview failed: could not play this media file."
+            : $"Preview failed: {detail}";
     }
 
     private bool CanPlayPreview()
@@ -3189,13 +3420,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         var asset = CurrentProject.MediaAssets.FirstOrDefault(x => x.Id == clip.MediaAssetId);
         if (asset is null || string.IsNullOrWhiteSpace(asset.FilePath))
+        {
+            PreviewStatusText = "Preview failed: media asset is missing.";
             return false;
+        }
+
+        if (!File.Exists(asset.FilePath))
+        {
+            PreviewStatusText = $"Preview failed: source file not found ({Path.GetFileName(asset.FilePath)}).";
+            return false;
+        }
 
         var offsetInsideClip = timelinePosition - clip.TimelineStart;
         if (offsetInsideClip < TimeSpan.Zero)
             offsetInsideClip = TimeSpan.Zero;
 
-        var nextSource = new Uri(asset.FilePath, UriKind.Absolute);
+        Uri nextSource;
+        try
+        {
+            nextSource = new Uri(asset.FilePath, UriKind.Absolute);
+        }
+        catch (UriFormatException)
+        {
+            PreviewStatusText = $"Preview failed: invalid media path ({asset.DisplayName}).";
+            return false;
+        }
+
         var isSamePreviewClip = _previewClipId == clip.Id && Equals(PreviewMediaSource, nextSource);
         var isSamePreviewSource = Equals(PreviewMediaSource, nextSource);
 
@@ -3599,11 +3849,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
             return;
         }
 
+        if (!File.Exists(asset.FilePath))
+        {
+            PreviewAudioSource = null;
+            PreviewAudioSourceStart = TimeSpan.Zero;
+            PreviewAudioSourceDuration = TimeSpan.Zero;
+            IsPreviewVideoAudioMuted = ShouldMuteActiveEmbeddedVideoAudio(timelinePosition);
+            PreviewVideoVolume = ResolveActiveEmbeddedVideoAudioVolume(timelinePosition);
+            PreviewStatusText = $"Audio preview skipped: source file not found ({Path.GetFileName(asset.FilePath)}).";
+            return;
+        }
+
         var offsetInsideClip = timelinePosition - audioClip.TimelineStart;
         if (offsetInsideClip < TimeSpan.Zero)
             offsetInsideClip = TimeSpan.Zero;
 
-        PreviewAudioSource = new Uri(asset.FilePath, UriKind.Absolute);
+        try
+        {
+            PreviewAudioSource = new Uri(asset.FilePath, UriKind.Absolute);
+        }
+        catch (UriFormatException)
+        {
+            PreviewAudioSource = null;
+            PreviewStatusText = $"Audio preview skipped: invalid media path ({asset.DisplayName}).";
+            return;
+        }
+
         PreviewAudioSourceStart = audioClip.SourceStart + offsetInsideClip;
         PreviewAudioSourceDuration = audioClip.SourceDuration - offsetInsideClip;
         PreviewAudioVolume = audioClip.AudioVolume;
@@ -3688,6 +3959,74 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     {
         return IsTrackOfKind(sourceTrack, "Video") && IsTrackOfKind(targetTrack, "Video") ||
                IsTrackOfKind(sourceTrack, "Audio") && IsTrackOfKind(targetTrack, "Audio");
+    }
+
+    private IEnumerable<(TimelineTrack Track, TimelineClip Clip)> ResolveLinkedTimelineClips(
+        TimelineTrack track,
+        TimelineClip clip)
+    {
+        if (clip.LinkedGroupId is null)
+            return new[] { (track, clip) };
+
+        return CurrentProject.Tracks
+            .SelectMany(existingTrack => existingTrack.Clips.Select(existingClip => (Track: existingTrack, Clip: existingClip)))
+            .Where(x => x.Clip.LinkedGroupId == clip.LinkedGroupId)
+            .ToList();
+    }
+
+    private static TimeSpan ResolvePreviousClipBoundary(
+        IEnumerable<(TimelineTrack Track, TimelineClip Clip)> trimTargets,
+        IReadOnlySet<Guid> trimClipIds)
+    {
+        var boundary = TimeSpan.Zero;
+
+        foreach (var (track, clip) in trimTargets)
+        {
+            var previousEnd = track.Clips
+                .Where(x => !trimClipIds.Contains(x.Id) && x.TimelineEnd <= clip.TimelineStart)
+                .Select(x => x.TimelineEnd)
+                .DefaultIfEmpty(TimeSpan.Zero)
+                .Max();
+
+            if (previousEnd > boundary)
+                boundary = previousEnd;
+        }
+
+        return boundary;
+    }
+
+    private static TimeSpan? ResolveNextClipBoundary(
+        IEnumerable<(TimelineTrack Track, TimelineClip Clip)> trimTargets,
+        IReadOnlySet<Guid> trimClipIds)
+    {
+        TimeSpan? boundary = null;
+
+        foreach (var (track, clip) in trimTargets)
+        {
+            var nextStart = track.Clips
+                .Where(x => !trimClipIds.Contains(x.Id) && x.TimelineStart >= clip.TimelineEnd)
+                .Select(x => (TimeSpan?)x.TimelineStart)
+                .OrderBy(x => x)
+                .FirstOrDefault();
+
+            if (nextStart is not null && (boundary is null || nextStart.Value < boundary.Value))
+                boundary = nextStart.Value;
+        }
+
+        return boundary;
+    }
+
+    private static TimeSpan ClampTimeSpan(TimeSpan value, TimeSpan minimum, TimeSpan maximum)
+    {
+        if (value < minimum)
+            return minimum;
+
+        return value > maximum ? maximum : value;
+    }
+
+    private static TimeSpan MaxTimeSpan(params TimeSpan[] values)
+    {
+        return values.Max();
     }
 
     private (TimelineTrack Track, TimelineClip Clip)? FindClipWithTrack(Guid clipId)

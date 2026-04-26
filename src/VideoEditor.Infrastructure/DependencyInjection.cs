@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddSingleton<IProjectPathService, FileSystemProjectPathService>();
         services.AddSingleton<IMediaDurationService, MediaDurationService>();
         services.AddSingleton<IMediaThumbnailService, MediaThumbnailService>();
+        services.AddSingleton<IAudioWaveformService, FfmpegAudioWaveformService>();
         services.AddSingleton<ITimelineExportService, FfmpegTimelineExportService>();
         return services;
     }

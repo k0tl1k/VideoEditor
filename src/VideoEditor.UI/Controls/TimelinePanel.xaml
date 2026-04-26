@@ -506,6 +506,24 @@
                                                                                          Margin="12,0,10,0"
                                                                                          VerticalAlignment="Center"
                                                                                          TextTrimming="CharacterEllipsis" />
+                                                                        <Border Width="10"
+                                                                                HorizontalAlignment="Left"
+                                                                                Background="Transparent"
+                                                                                Cursor="SizeWE"
+                                                                                Tag="Left"
+                                                                                ToolTip="Trim start"
+                                                                                PreviewMouseLeftButtonDown="TrimHandle_PreviewMouseLeftButtonDown"
+                                                                                PreviewMouseMove="TrimHandle_PreviewMouseMove"
+                                                                                PreviewMouseLeftButtonUp="TrimHandle_PreviewMouseLeftButtonUp" />
+                                                                        <Border Width="10"
+                                                                                HorizontalAlignment="Right"
+                                                                                Background="Transparent"
+                                                                                Cursor="SizeWE"
+                                                                                Tag="Right"
+                                                                                ToolTip="Trim end"
+                                                                                PreviewMouseLeftButtonDown="TrimHandle_PreviewMouseLeftButtonDown"
+                                                                                PreviewMouseMove="TrimHandle_PreviewMouseMove"
+                                                                                PreviewMouseLeftButtonUp="TrimHandle_PreviewMouseLeftButtonUp" />
                                                                         <Border Width="18"
                                                                                 Height="18"
                                                                                 HorizontalAlignment="Right"
@@ -616,6 +634,10 @@
                                                                         </ContextMenu>
                                                                     </Border.ContextMenu>
                                                                       <Grid>
+                                                                          <controls:AudioWaveformControl Peaks="{Binding WaveformPeaks}"
+                                                                                                         Margin="8,5,8,5"
+                                                                                                         Opacity="0.72"
+                                                                                                         IsHitTestVisible="False" />
                                                                           <Border Width="4"
                                                                                   HorizontalAlignment="Left"
                                                                                   Background="{Binding AccentColor}"
@@ -628,6 +650,24 @@
                                                                                      Margin="12,0,10,0"
                                                                                      VerticalAlignment="Center"
                                                                                      TextTrimming="CharacterEllipsis" />
+                                                                          <Border Width="10"
+                                                                                  HorizontalAlignment="Left"
+                                                                                  Background="Transparent"
+                                                                                  Cursor="SizeWE"
+                                                                                  Tag="Left"
+                                                                                  ToolTip="Trim start"
+                                                                                  PreviewMouseLeftButtonDown="TrimHandle_PreviewMouseLeftButtonDown"
+                                                                                  PreviewMouseMove="TrimHandle_PreviewMouseMove"
+                                                                                  PreviewMouseLeftButtonUp="TrimHandle_PreviewMouseLeftButtonUp" />
+                                                                          <Border Width="10"
+                                                                                  HorizontalAlignment="Right"
+                                                                                  Background="Transparent"
+                                                                                  Cursor="SizeWE"
+                                                                                  Tag="Right"
+                                                                                  ToolTip="Trim end"
+                                                                                  PreviewMouseLeftButtonDown="TrimHandle_PreviewMouseLeftButtonDown"
+                                                                                  PreviewMouseMove="TrimHandle_PreviewMouseMove"
+                                                                                  PreviewMouseLeftButtonUp="TrimHandle_PreviewMouseLeftButtonUp" />
                                                                     </Grid>
                                                                 </Border>
                                                             </DataTemplate>

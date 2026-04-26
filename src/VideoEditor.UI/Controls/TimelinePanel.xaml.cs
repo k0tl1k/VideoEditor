@@ -32,6 +32,12 @@ public partial class TimelinePanel : UserControl
     private bool _selectionAddsToExisting;
     private bool _isDraggingRulerPlayhead;
     private bool _isSynchronizingTimelineHorizontalScroll;
+    private Point? _trimStartPoint;
+    private TimelineClipItemViewModel? _trimClip;
+    private FrameworkElement? _trimHandle;
+    private bool _trimIsLeftEdge;
+    private bool _isTrimmingClip;
+    private bool _trimUndoCaptured;
 
     public TimelinePanel()
     {
@@ -114,6 +120,22 @@ public partial class TimelinePanel : UserControl
         return false;
     }
 
+    private static bool IsTrimHandleSource(object? source)
+    {
+        var current = source as DependencyObject;
+        while (current is not null)
+        {
+            if (current is FrameworkElement { Tag: string tag } &&
+                (tag.Equals("Left", StringComparison.OrdinalIgnoreCase) ||
+                 tag.Equals("Right", StringComparison.OrdinalIgnoreCase)))
+                return true;
+
+            current = VisualTreeHelper.GetParent(current);
+        }
+
+        return false;
+    }
+
     private void TimelinePanel_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         Focus();
@@ -140,6 +162,12 @@ public partial class TimelinePanel : UserControl
 
     private void TimelinePanel_PreviewMouseMove(object sender, MouseEventArgs e)
     {
+        if (_trimClip is not null)
+        {
+            UpdateTrimFromMouse(e);
+            return;
+        }
+
         if (_selectionStartPoint is null || e.LeftButton != MouseButtonState.Pressed)
             return;
 
@@ -164,6 +192,12 @@ public partial class TimelinePanel : UserControl
 
     private void TimelinePanel_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
+        if (_trimClip is not null)
+        {
+            CompleteClipTrim(e);
+            return;
+        }
+
         if (_selectionStartPoint is null)
             return;
 
@@ -204,6 +238,9 @@ public partial class TimelinePanel : UserControl
 
     private void Clip_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (IsTrimHandleSource(e.OriginalSource))
+            return;
+
         _dragClip = (sender as FrameworkElement)?.DataContext as TimelineClipItemViewModel;
 
         if (_dragClip is not null && DataContext is MainWindowViewModel timelineViewModel)
@@ -341,6 +378,9 @@ public partial class TimelinePanel : UserControl
 
     private void Clip_PreviewMouseMove(object sender, MouseEventArgs e)
     {
+        if (_trimClip is not null)
+            return;
+
         if (DataContext is MainWindowViewModel timelineViewModel &&
             timelineViewModel.IsRazorTimelineToolActive)
             return;
@@ -374,6 +414,79 @@ public partial class TimelinePanel : UserControl
             _dragClipGrabOffsetX = 0;
             _dragClip = null;
         }
+    }
+
+    private void TrimHandle_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel timelineViewModel)
+            return;
+
+        if (timelineViewModel.IsRazorTimelineToolActive)
+            return;
+
+        if (sender is not FrameworkElement handle ||
+            handle.DataContext is not TimelineClipItemViewModel clip)
+            return;
+
+        _trimClip = clip;
+        _trimHandle = handle;
+        _trimStartPoint = e.GetPosition(this);
+        _trimIsLeftEdge = string.Equals(handle.Tag as string, "Left", StringComparison.OrdinalIgnoreCase);
+        _isTrimmingClip = false;
+        _trimUndoCaptured = false;
+
+        timelineViewModel.SelectClipForPreview(clip.ClipId, Keyboard.Modifiers.HasFlag(ModifierKeys.Control));
+        CaptureMouse();
+        Focus();
+        e.Handled = true;
+    }
+
+    private void TrimHandle_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        UpdateTrimFromMouse(e);
+    }
+
+    private void UpdateTrimFromMouse(MouseEventArgs e)
+    {
+        if (_trimStartPoint is null ||
+            _trimClip is null ||
+            e.LeftButton != MouseButtonState.Pressed)
+            return;
+
+        var currentPoint = e.GetPosition(this);
+        var delta = currentPoint - _trimStartPoint.Value;
+        if (!_isTrimmingClip &&
+            Math.Abs(delta.X) < SystemParameters.MinimumHorizontalDragDistance)
+            return;
+
+        if (DataContext is not MainWindowViewModel timelineViewModel)
+            return;
+
+        _isTrimmingClip = true;
+        var pointOnTimeline = e.GetPosition(TimelineScrollViewer);
+        var canvasLeft = Math.Max(0, pointOnTimeline.X + TimelineScrollViewer.HorizontalOffset);
+        var changed = timelineViewModel.TrimClipEdge(_trimClip.ClipId, _trimIsLeftEdge, canvasLeft, !_trimUndoCaptured);
+        if (changed)
+            _trimUndoCaptured = true;
+        e.Handled = true;
+    }
+
+    private void TrimHandle_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        CompleteClipTrim(e);
+    }
+
+    private void CompleteClipTrim(MouseButtonEventArgs e)
+    {
+        if (IsMouseCaptured)
+            ReleaseMouseCapture();
+
+        _trimStartPoint = null;
+        _trimClip = null;
+        _trimHandle = null;
+        _isTrimmingClip = false;
+        _trimUndoCaptured = false;
+        e.Handled = true;
     }
 
     private void TrackLane_DragEnter(object sender, DragEventArgs e)

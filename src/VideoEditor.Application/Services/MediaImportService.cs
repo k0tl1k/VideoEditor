@@ -26,6 +26,9 @@ public sealed class MediaImportService : IMediaImportService
         foreach (var path in filePaths.Where(File.Exists))
         {
             var extension = Path.GetExtension(path);
+            if (!MediaFileFormats.IsSupportedExtension(extension))
+                continue;
+
             var mediaType = MediaFileFormats.ResolveMediaType(extension);
 
             result.Add(new MediaAsset

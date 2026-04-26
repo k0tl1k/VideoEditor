@@ -60,6 +60,11 @@ public sealed class TimelineClipItemViewModel : INotifyPropertyChanged
     /// </summary>
     public required bool IsLinkedClip { get; init; }
 
+    /// <summary>
+    ///     Downsampled waveform peaks for the visible source segment.
+    /// </summary>
+    public IReadOnlyList<double> WaveformPeaks { get; init; } = Array.Empty<double>();
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>
