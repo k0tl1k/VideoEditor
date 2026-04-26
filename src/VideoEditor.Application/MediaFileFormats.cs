@@ -44,6 +44,16 @@ public static class MediaFileFormats
         return MediaType.Video;
     }
 
+    /// <summary>
+    ///     Checks whether the file extension is supported by the editor import pipeline.
+    /// </summary>
+    public static bool IsSupportedExtension(string extension)
+    {
+        return Contains(VideoExtensions, extension) ||
+               Contains(AudioExtensions, extension) ||
+               Contains(ImageExtensions, extension);
+    }
+
     private static bool Contains(IEnumerable<string> extensions, string extension)
     {
         return extensions.Contains(extension, StringComparer.OrdinalIgnoreCase);
